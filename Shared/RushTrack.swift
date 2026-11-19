@@ -5,7 +5,11 @@ import SwiftUI
 struct RushTrack: View {
     let engine: GameEngine
     var compact = false
-    private var tint: Color { engine.isFever ? .orange : .mint }
+    var theme: RushTheme = .mint
+    private var tint: Color {
+        if engine.isFever { return .orange }
+        return theme.color
+    }
 
     var body: some View {
         // GeometryReader donne la taille disponible pour adapter le dessin.

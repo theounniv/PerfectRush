@@ -16,6 +16,10 @@ final class GameModel: ObservableObject {
     @Published private(set) var engine = GameEngine()
     @Published private(set) var best: Int
     @Published private(set) var message = "Vise le centre"
+    @Published private(set) var rewards: RewardsProgress
+    @Published private(set) var runRewardCents = 0
+    @Published private(set) var lastRewardCents = 0
+    @Published private(set) var shopMessage = "Les couleurs ne changent pas la difficulté."
 
     @Published var haptics: Bool {
         didSet {
@@ -31,11 +35,20 @@ final class GameModel: ObservableObject {
         self.defaults = defaults
         best = defaults.integer(forKey: "best")
         haptics = defaults.object(forKey: "haptics") as? Bool ?? true
+        // JSONEncoder/Decoder sauvegardent toute la progression en une seule donnée.
+        if let data = defaults.data(forKey: "rewards-v1"),
+           let saved = try? JSONDecoder().decode(RewardsProgress.self, from: data) {
+            rewards = saved
+        } else {
+            rewards = RewardsProgress()
+        }
     }
 
     func start() {
         engine.start()
         message = "Vise le centre"
+        runRewardCents = 0
+        lastRewardCents = 0
         lastFrame = nil
     }
 
@@ -62,6 +75,11 @@ final class GameModel: ObservableObject {
         }
 
         updateMessage(for: result)
+        lastRewardCents = rewards.recordHit(result, isFever: engine.isFever)
+        runRewardCents += lastRewardCents
+        if lastRewardCents > 0 {
+            saveRewards()
+        }
         saveBestScore()
         playHaptic(for: result)
     }
@@ -90,6 +108,26 @@ final class GameModel: ObservableObject {
             best = engine.score
             defaults.set(best, forKey: "best")
         }
+    }
+
+    // Même sans finir la partie, les gains déjà obtenus sont conservés.
+    private func saveRewards() {
+        if let data = try? JSONEncoder().encode(rewards) {
+            defaults.set(data, forKey: "rewards-v1")
+        }
+    }
+
+    func buyTheme(_ theme: RushTheme) {
+        let result = rewards.buyOrSelect(theme)
+        switch result {
+        case .purchased:
+            shopMessage = theme.name + " débloquée avec ton solde fictif !"
+        case .selected:
+            shopMessage = theme.name + " équipée."
+        case .insufficientFunds:
+            shopMessage = "Solde fictif insuffisant. Aucun montant débité."
+        }
+        saveRewards()
     }
 
     // iPhone et Apple Watch utilisent des API différentes pour vibrer.
