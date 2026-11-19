@@ -1,14 +1,20 @@
+// Projet de cours — Théo BOREL et Lana SCHMITT.
+// Écran iPhone : on lit le modèle et les boutons appellent ses méthodes.
 import SwiftUI
 import Combine
 
 struct PhoneGameView: View {
+    // SwiftUI conserve ce modèle pendant la vie de cet écran.
     @StateObject private var model = GameModel()
+    // Permet de mettre en pause quand on quitte l’application.
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // Le Timer demande régulièrement de mettre à jour le curseur.
     private let clock = Timer.publish(every: 1.0 / 60, on: .main, in: .common).autoconnect()
     private var accent: Color { model.engine.isFever ? .orange : .mint }
 
     var body: some View {
+        // GeometryReader donne la taille disponible pour adapter le dessin.
         GeometryReader { geometry in
             ZStack {
                 LinearGradient(colors: [Color(red: 0.025, green: 0.04, blue: 0.09), .black],
@@ -74,6 +80,7 @@ struct PhoneGameView: View {
             }
         }
     }
+    // Décor uniquement : les vraies règles restent dans GameEngine.
     private var tower: some View {
         VStack(spacing: 5) {
             ForEach((0..<6).reversed(), id: \.self) { index in
@@ -85,6 +92,7 @@ struct PhoneGameView: View {
         .animation(reduceMotion ? nil : .spring(response: 0.25), value: model.engine.floor)
         .accessibilityHidden(true)
     }
+    // Chaque état de partie propose le bon bouton.
     @ViewBuilder private var controls: some View {
         switch model.engine.phase {
         case .ready:
