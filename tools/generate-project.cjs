@@ -11,11 +11,11 @@ const add = (key, value) => objects.push(`${key} = { ${value} };`);
 const quote = s => JSON.stringify(s);
 const list = a => `(${a.join(',')}${a.length ? ',' : ''})`;
 const project = id(), main = id(), products = id(), projectConfigs = id();
-const commonFiles = ['Sources/RushCore/GameEngine.swift', 'Shared/GameModel.swift', 'Shared/RushTrack.swift'];
+const commonFiles = ['Sources/RushCore/GameEngine.swift', 'Sources/RushCore/RewardsProgress.swift', 'Shared/GameModel.swift', 'Shared/RushTrack.swift', 'Shared/RewardsView.swift'];
 const definitions = [
   {name:'PerfectRush', files:[...commonFiles, 'iOS/PerfectRushApp.swift', 'iOS/PhoneGameView.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush', kind:'application'},
   {name:'PerfectRushWatch', files:[...commonFiles, 'Watch/PerfectRushWatchApp.swift', 'Watch/WatchGameView.swift'], sdk:'watchos', platforms:'watchos watchsimulator', family:'4', bundle:'fr.theounniv.perfectrush.watch', kind:'application'},
-  {name:'PerfectRushTests', files:['Tests/RushCoreTests/GameEngineTests.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.tests', kind:'bundle.unit-test'},
+  {name:'PerfectRushTests', files:['Tests/RushCoreTests/GameEngineTests.swift', 'Tests/RushCoreTests/RewardsProgressTests.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.tests', kind:'bundle.unit-test'},
   {name:'PerfectRushWidget', files:['Widgets/PerfectRushWidget.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.widget', kind:'app-extension', parent:'PerfectRush'},
   {name:'PerfectRushWatchWidget', files:['Widgets/PerfectRushWidget.swift'], sdk:'watchos', platforms:'watchos watchsimulator', family:'4', bundle:'fr.theounniv.perfectrush.watch.widget', kind:'app-extension', parent:'PerfectRushWatch'}
 ];
