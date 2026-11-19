@@ -1,11 +1,14 @@
 name: Validation Swift et simulateurs
 on: [push, pull_request, workflow_dispatch]
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   validate:
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Tests des règles partagées
         run: swift test
       - name: Compiler iPhone et les tests
