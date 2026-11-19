@@ -1,9 +1,14 @@
+// Projet de cours — Théo BOREL et Lana SCHMITT.
+// Écran compact du jeu pour l'Apple Watch.
 import SwiftUI
 import Combine
 
 struct WatchGameView: View {
+    // SwiftUI conserve ce modèle pendant la vie de cet écran.
     @StateObject private var model = GameModel()
+    // Permet de mettre en pause quand on quitte l’application.
     @Environment(\.scenePhase) private var scenePhase
+    // Le Timer demande régulièrement de mettre à jour le curseur.
     private let clock = Timer.publish(every: 1.0 / 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -40,6 +45,7 @@ struct WatchGameView: View {
         .onReceive(clock) { _ in model.frame() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.pause() } }
     }
+    // Le même bouton sert à jouer, toucher, reprendre ou rejouer.
     private var label: String {
         switch model.engine.phase {
         case .ready: return "Jouer"
