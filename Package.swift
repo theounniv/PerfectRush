@@ -1,4 +1,6 @@
 // swift-tools-version: 5.9
+// Projet de cours — Théo BOREL et Lana SCHMITT.
+// Permet de tester les règles avec la commande swift test.
 import PackageDescription
 
 let package = Package(

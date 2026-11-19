@@ -1,5 +1,7 @@
 # Perfect Rush
 
+Projet de cours — **Théo BOREL et Lana SCHMITT**.
+
 Mini-jeu de précision en SwiftUI pour **iPhone et Apple Watch**. Deux apps autonomes, un moteur de règles commun, aucun compte ni serveur.
 
 ## Sur ton Mac : installation de zéro
@@ -97,14 +99,14 @@ Le package teste le moteur seul sans SwiftUI et sans simulateur.
 ~~~bash
 git status
 git diff
-git add Sources Shared iOS Watch Tests
+git add Sources Shared iOS Watch Widgets Tests PerfectRush.xcodeproj
 git commit -m "Améliore Perfect Rush"
 git push
 ~~~
 
 ## État de validation
 
-Projet préparé depuis un environnement Windows : la compilation SwiftUI/iOS/watchOS et le rendu sur simulateur restent à vérifier dans Xcode sur le Mac. Les tests sont fournis ; leur présence n’est pas une preuve de réussite. Exécute les commandes ci-dessus et conserve les résultats avant de présenter le travail comme validé.
+Les résultats de compilation et des tests sont consultables dans l’onglet Actions du dépôt. Le contrôle construit les deux applications et leurs widgets puis exécute les tests des règles partagées. Il ne remplace pas les essais manuels : ajout à l’accueil, toucher du widget, lisibilité, sensations de jeu et vibrations.
 
 ## Références
 
@@ -113,3 +115,38 @@ Projet préparé depuis un environnement Windows : la compilation SwiftUI/iOS/wa
 - Tests XCTest : https://developer.apple.com/documentation/xctest
 
 Projet créé de zéro, distinct du TP CoursProductivite.
+
+## Widgets d’accueil
+
+Un même fichier Swift simple définit les deux widgets. Ce sont des raccourcis : ils ouvrent le jeu sans recommencer une partie. Le widget ne montre pas de faux score et ne fait pas tourner une partie en arrière-plan. Aucun App Group ni partage de données à configurer.
+
+### iPhone : petit ou moyen widget
+
+1. Compile et lance **PerfectRush** une fois sur le simulateur avec ⌘ R.
+2. Reviens à l’accueil du simulateur (menu Device > Home, ou ⌘ ⇧ H).
+3. Fais un appui long sur une zone vide et utilise le bouton d’ajout de widgets (selon la version iOS : + ou Modifier > Ajouter un widget).
+4. Recherche **Perfect Rush**, choisis le petit ou le moyen format et ajoute-le.
+5. Touche le widget : l’application doit s’ouvrir.
+
+### Apple Watch : Smart Stack et complication
+
+1. Compile et lance **PerfectRushWatch** une fois.
+2. Reviens au cadran. Ouvre la Smart Stack avec la Digital Crown ou un balayage vers le haut.
+3. Fais un appui long pour modifier la pile, puis ajoute le widget **Perfect Rush**.
+4. Touche-le : le jeu doit s’ouvrir.
+5. Pour une complication de cadran, choisis un cadran possédant un emplacement circulaire ou rectangulaire compatible, puis sélectionne Perfect Rush dans cet emplacement.
+
+La Watch ne possède pas de widgets à placer parmi la grille d’icônes comme sur iPhone : on utilise la Smart Stack ou une complication. Si le widget n’apparaît pas, vérifie que tu as relancé l’app après la mise à jour et que le runtime du simulateur est compatible.
+
+## Lire le code quand on débute
+
+1. **GameEngine.swift** : variables, conditions if, points et règle du bouclier. Les calculs de mouvement sont commentés.
+2. **GameEngineTests.swift** : une méthode par comportement à vérifier. XCTAssertEqual compare le résultat obtenu au résultat attendu.
+3. **GameModel.swift** : transforme les résultats en messages, sauvegarde le record et déclenche les vibrations.
+4. **PhoneGameView.swift / WatchGameView.swift** : affichage SwiftUI. VStack place les vues verticalement ; HStack horizontalement ; ZStack les superpose.
+5. **RushTrack.swift** : convertit la position entre 0 et 1 en coordonnées sur l’écran.
+6. **PerfectRushWidget.swift** : le fournisseur prépare une entrée datée, puis SwiftUI dessine le raccourci.
+
+Les règles sont séparées du dessin pour pouvoir les tester. Les calculs de points utilisent des if explicites ; il n’y a pas de bibliothèque externe. public autorise le package de tests à lire une valeur ; private(set) lui interdit de la modifier directement. mutating indique qu’une méthode modifie une struct.
+
+Le dossier tools concerne seulement la configuration Xcode : vous n’avez pas besoin de l’utiliser pour lancer ou modifier le jeu. Les mêmes règles servent à l’iPhone et à la Watch, sans recopier le moteur.
