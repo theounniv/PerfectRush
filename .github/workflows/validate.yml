@@ -1,0 +1,14 @@
+name: Validation Swift et simulateurs
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  validate:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tests des règles partagées
+        run: swift test
+      - name: Compiler iPhone et les tests
+        run: xcodebuild build-for-testing -project PerfectRush.xcodeproj -scheme PerfectRush -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+      - name: Compiler Apple Watch
+        run: xcodebuild build -project PerfectRush.xcodeproj -scheme PerfectRushWatch -destination 'generic/platform=watchOS Simulator' CODE_SIGNING_ALLOWED=NO
