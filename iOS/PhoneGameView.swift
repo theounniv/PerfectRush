@@ -6,12 +6,16 @@ import Combine
 struct PhoneGameView: View {
     // SwiftUI conserve ce modèle pendant la vie de cet écran.
     @StateObject private var model = GameModel()
+    @State private var showRewards = false
     // Permet de mettre en pause quand on quitte l’application.
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     // Le Timer demande régulièrement de mettre à jour le curseur.
     private let clock = Timer.publish(every: 1.0 / 60, on: .main, in: .common).autoconnect()
-    private var accent: Color { model.engine.isFever ? .orange : .mint }
+    private var accent: Color {
+        if model.engine.isFever { return .orange }
+        return model.rewards.selectedTheme.color
+    }
 
     var body: some View {
         // GeometryReader donne la taille disponible pour adapter le dessin.
@@ -22,6 +26,7 @@ struct PhoneGameView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         header
+                        wallet
                         HStack {
                             Label("RECORD \(model.best)", systemImage: "trophy.fill")
                             Spacer()
@@ -43,7 +48,12 @@ struct PhoneGameView: View {
                                 Spacer()
                                 Text("×\(model.engine.multiplier)").font(.title2.monospaced().bold()).foregroundStyle(accent)
                             }
-                            RushTrack(engine: model.engine)
+                            RushTrack(engine: model.engine, theme: model.rewards.selectedTheme)
+                            if model.lastRewardCents > 0 {
+                                Text("+" + RewardsProgress.money(model.lastRewardCents) + " fictifs")
+                                    .font(.headline).foregroundStyle(accent)
+                                    .contentTransition(.numericText())
+                            }
                             if model.engine.isFever {
                                 ProgressView(value: model.engine.feverRemaining, total: 5).tint(.orange)
                             }
@@ -64,6 +74,31 @@ struct PhoneGameView: View {
         }
         .onReceive(clock) { _ in model.frame() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.pause() } }
+        .sheet(isPresented: $showRewards) { RewardsView(model: model) }
+    }
+
+    // Le solde reste clairement fictif, y compris pendant les animations.
+    private var wallet: some View {
+        Button {
+            model.pause()
+            showRewards = true
+        } label: {
+            HStack {
+                Image(systemName: "sparkles")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(RewardsProgress.money(model.rewards.balance))
+                        .font(.title2.bold()).contentTransition(.numericText())
+                    Text("Solde fictif · aucun retrait possible").font(.caption2)
+                }
+                Spacer()
+                Label("Défis & couleurs", systemImage: "paintpalette.fill").font(.caption.bold())
+            }
+            .padding(16)
+            .foregroundStyle(accent)
+            .background(accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 20))
+        }
+        .buttonStyle(.plain)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: model.rewards.balance)
     }
 
     private var header: some View {
@@ -104,6 +139,8 @@ struct PhoneGameView: View {
             primary("REPRENDRE", icon: "play.fill") { model.resume() }
         case .gameOver:
             Text("Partie terminée · \(model.engine.floor) étages").font(.headline)
+            Text("Gains conservés : " + RewardsProgress.money(model.runRewardCents) + " fictifs")
+                .font(.subheadline).foregroundStyle(accent)
             primary("REJOUER", icon: "arrow.clockwise") { model.start() }
         }
     }
