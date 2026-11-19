@@ -51,11 +51,11 @@ Les deux cibles sont indépendantes. Pour installer sur un appareil réel, séle
 - La vitesse augmente et la cible rétrécit à chaque étage, avec des limites.
 - Le bouton Pause et le passage hors premier plan figent la partie. La reprise est manuelle.
 
-Le décor de tour indique la progression par cycles de six étages ; le compteur donne le total. Le jeu inclut les retours haptiques, mais pas encore de musique, de sons, de boutique ou de cosmétiques à débloquer. Pas de notifications, de publicités ni de paiement.
+Le décor de tour indique la progression par cycles de six étages ; le compteur donne le total. Le jeu inclut les retours haptiques, un portefeuille fictif, des défis permanents et une boutique de couleurs. Pas de musique, de sons, de notifications, de publicités ni de paiement.
 
 ## Tests
 
-20 tests unitaires couvrent les règles partagées, dont les régressions sur les limites de cible, le redémarrage, la pause, l’expiration de Fever, les doubles appuis et les pas de temps invalides.
+32 tests unitaires couvrent les règles partagées et l’économie fictive, dont les régressions sur les limites de cible, le redémarrage, la pause, l’expiration de Fever, les doubles appuis et les pas de temps invalides.
 
 ### Dans Xcode
 
@@ -150,3 +150,51 @@ La Watch ne possède pas de widgets à placer parmi la grille d’icônes comme 
 Les règles sont séparées du dessin pour pouvoir les tester. Les calculs de points utilisent des if explicites ; il n’y a pas de bibliothèque externe. public autorise le package de tests à lire une valeur ; private(set) lui interdit de la modifier directement. mutating indique qu’une méthode modifie une struct.
 
 Le dossier tools concerne seulement la configuration Xcode : vous n’avez pas besoin de l’utiliser pour lancer ou modifier le jeu. Les mêmes règles servent à l’iPhone et à la Watch, sans recopier le moteur.
+
+## Récompenses et portefeuille fictif
+
+Tous les montants affichés sont fictifs : **aucun paiement, aucun gain réel et aucun retrait possible**. Les prix sont stockés en centimes entiers pour éviter les arrondis.
+
+| Action | Crédit fictif |
+|---|---|
+| Réussir un étage | 0,10 € |
+| Réussir un Perfect | +0,25 € en plus des 0,10 € de l’étage |
+| Défi : 5 Perfect au total | +1,00 €, une seule fois |
+| Défi : 20 étages au total | +2,00 €, une seule fois |
+| Défi : déclencher Fever | +1,50 €, une seule fois |
+
+Les gains sont sauvegardés après chaque réussite : pas besoin de finir ou de rejouer pour les conserver. Le bilan de partie inclut les bonus des défis débloqués. Rater ne retire rien du portefeuille. Le mode Fever double les points de score, pas la monnaie fictive de base.
+
+Ouvre **Défis & couleurs** pour voir les objectifs et la boutique. Ouvrir cet écran met la partie en pause ; la reprise reste manuelle. Sur Watch, le bouton sous TAP ouvre le même écran avec défilement.
+
+| Couleur | Prix fictif |
+|---|---|
+| Menthe | Déjà disponible |
+| Néon violet | 2,00 € |
+| Or solaire | 5,00 € |
+| Glacier | 9,00 € |
+
+Un achat débite une seule fois le prix, débloque et équipe la couleur. Rechoisir une couleur possédée est gratuit. Une couleur ne change ni le score ni les règles : pendant Fever, la piste devient orange, puis retrouve la couleur choisie.
+
+La progression est locale à chaque appareil et peut disparaître si l’app est désinstallée. Le widget reste un raccourci sans affichage de solde : pas de partage de portefeuille à configurer.
+
+### Code à lire
+
+- Sources/RushCore/RewardsProgress.swift : montants, défis, couleurs et achat ; conditions if et tableaux simples.
+- Shared/GameModel.swift : crédit après un toucher accepté et sauvegarde dans UserDefaults.
+- Shared/RewardsView.swift : écran de boutique commun aux deux plateformes.
+- Tests/RushCoreTests/RewardsProgressTests.swift : 12 tests sur les crédits, les bonus uniques, les achats, la sauvegarde et le formatage.
+
+### Essais manuels supplémentaires
+
+1. Réussir un toucher : le solde augmente de 0,10 € fictif (0,35 € pour un Perfect).
+2. Débloquer un défi : son bonus apparaît dans le montant reçu et n’est plus versé aux parties suivantes.
+3. Ouvrir la boutique : la partie se met en pause.
+4. Vérifier qu’un achat trop cher est désactivé ; gagner assez puis acheter une couleur.
+5. Rechoisir cette couleur : aucun deuxième débit.
+6. Revenir au jeu et reprendre : la piste et les boutons utilisent la couleur équipée.
+7. Relancer l’app : solde, défis et couleurs sont conservés.
+8. Vérifier ces étapes sur iPhone et Watch, dont une petite taille d’écran.
+9. Vérifier le libellé du solde fictif et l’option Réduire les animations sur iPhone.
+
+Pour mettre à jour la copie sur le Mac : enregistrer ses changements éventuels, puis exécuter git pull dans le dossier PerfectRush et rouvrir le projet.
