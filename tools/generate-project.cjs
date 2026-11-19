@@ -1,3 +1,6 @@
+// Projet de cours — Théo BOREL et Lana SCHMITT.
+// Outil de maintenance : il écrit le projet Xcode et relie ses cibles.
+// Pour travailler sur le jeu, ouvrir le .xcodeproj ; ne pas modifier cet outil.
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
@@ -12,7 +15,9 @@ const commonFiles = ['Sources/RushCore/GameEngine.swift', 'Shared/GameModel.swif
 const definitions = [
   {name:'PerfectRush', files:[...commonFiles, 'iOS/PerfectRushApp.swift', 'iOS/PhoneGameView.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush', kind:'application'},
   {name:'PerfectRushWatch', files:[...commonFiles, 'Watch/PerfectRushWatchApp.swift', 'Watch/WatchGameView.swift'], sdk:'watchos', platforms:'watchos watchsimulator', family:'4', bundle:'fr.theounniv.perfectrush.watch', kind:'application'},
-  {name:'PerfectRushTests', files:['Tests/RushCoreTests/GameEngineTests.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.tests', kind:'bundle.unit-test'}
+  {name:'PerfectRushTests', files:['Tests/RushCoreTests/GameEngineTests.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.tests', kind:'bundle.unit-test'},
+  {name:'PerfectRushWidget', files:['Widgets/PerfectRushWidget.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.widget', kind:'app-extension', parent:'PerfectRush'},
+  {name:'PerfectRushWatchWidget', files:['Widgets/PerfectRushWidget.swift'], sdk:'watchos', platforms:'watchos watchsimulator', family:'4', bundle:'fr.theounniv.perfectrush.watch.widget', kind:'app-extension', parent:'PerfectRushWatch'}
 ];
 const refs = new Map();
 for (const file of new Set(definitions.flatMap(t=>t.files))) {
@@ -21,15 +26,17 @@ for (const file of new Set(definitions.flatMap(t=>t.files))) {
 }
 for (const t of definitions) {
   t.id = id(); t.product = id(); t.configs = id(); t.sources = id(); t.frameworks=id(); t.resources=id();
-  const ext = t.kind === 'application' ? 'app' : 'xctest';
-  add(t.product, `isa = PBXFileReference; explicitFileType = ${t.kind === 'application' ? 'wrapper.application' : 'wrapper.cfbundle'}; includeInIndex = 0; path = ${t.name}.${ext}; sourceTree = BUILT_PRODUCTS_DIR;`);
+  const ext = t.kind === 'application' ? 'app' : t.kind === 'app-extension' ? 'appex' : 'xctest';
+  const fileType = t.kind === 'application' ? 'wrapper.application' : t.kind === 'app-extension' ? 'wrapper.app-extension' : 'wrapper.cfbundle';
+  add(t.product, `isa = PBXFileReference; explicitFileType = ${fileType}; includeInIndex = 0; path = ${t.name}.${ext}; sourceTree = BUILT_PRODUCTS_DIR;`);
   const builds = t.files.map(file=>{ const key=id(); add(key,`isa = PBXBuildFile; fileRef = ${refs.get(file)};`); return key; });
   add(t.sources, `isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = ${list(builds)}; runOnlyForDeploymentPostprocessing = 0;`);
   for (const [key,isa] of [[t.frameworks,'PBXFrameworksBuildPhase'],[t.resources,'PBXResourcesBuildPhase']]) add(key, `isa = ${isa}; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;`);
   const configurations=[];
   for (const config of ['Debug','Release']) {
     const key=id(); configurations.push(key);
-    const test=t.kind!=='application';
+    const test=t.kind==='bundle.unit-test';
+    const widget=t.kind==='app-extension';
     const settings={
       PRODUCT_NAME:'$(TARGET_NAME)', PRODUCT_BUNDLE_IDENTIFIER:t.bundle,
       SDKROOT:t.sdk, SUPPORTED_PLATFORMS:t.platforms, TARGETED_DEVICE_FAMILY:t.family,
@@ -38,8 +45,11 @@ for (const t of definitions) {
       SWIFT_OPTIMIZATION_LEVEL:config==='Debug'?'-Onone':'-O',
       SWIFT_ACTIVE_COMPILATION_CONDITIONS:config==='Debug'?'DEBUG':'',
       ENABLE_TESTABILITY:config==='Debug'?'YES':'NO',
-      ...(t.sdk==='watchos'?{WATCHOS_DEPLOYMENT_TARGET:'10.0', INFOPLIST_KEY_WKApplication:'YES', INFOPLIST_KEY_WKWatchOnly:'YES'}:{IPHONEOS_DEPLOYMENT_TARGET:'17.0'}),
-      ...(test?{TEST_HOST:'$(BUILT_PRODUCTS_DIR)/PerfectRush.app/PerfectRush',BUNDLE_LOADER:'$(TEST_HOST)'}:{INFOPLIST_KEY_CFBundleDisplayName:'Perfect Rush',INFOPLIST_KEY_UILaunchScreen_Generation:'YES'}),
+      ...(t.sdk==='watchos'?{WATCHOS_DEPLOYMENT_TARGET:'10.0'}:{IPHONEOS_DEPLOYMENT_TARGET:'17.0'}),
+      ...(t.name==='PerfectRushWatch'?{INFOPLIST_KEY_WKApplication:'YES',INFOPLIST_KEY_WKWatchOnly:'YES'}:{}),
+      ...(test?{TEST_HOST:'$(BUILT_PRODUCTS_DIR)/PerfectRush.app/PerfectRush',BUNDLE_LOADER:'$(TEST_HOST)'}:{INFOPLIST_KEY_CFBundleDisplayName:'Perfect Rush'}),
+      ...(widget?{INFOPLIST_FILE:'Widgets/Info.plist',APPLICATION_EXTENSION_API_ONLY:'YES',SKIP_INSTALL:'YES',LD_RUNPATH_SEARCH_PATHS:'$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks'}:{}),
+      ...(t.kind==='application'?{INFOPLIST_KEY_UILaunchScreen_Generation:'YES'}:{}),
       ...(t.name==='PerfectRush'?{INFOPLIST_KEY_UIApplicationSceneManifest_Generation:'YES',INFOPLIST_KEY_UISupportedInterfaceOrientations:'UIInterfaceOrientationPortrait',INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad:'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'}:{})
     };
     add(key, `isa = XCBuildConfiguration; buildSettings = { ${Object.entries(settings).map(([k,v])=>`${k} = ${quote(v)};`).join(' ')} }; name = ${config};`);
@@ -50,7 +60,21 @@ const test=definitions[2], phone=definitions[0];
 const proxy=id(), dependency=id();
 add(proxy, `isa = PBXContainerItemProxy; containerPortal = ${project}; proxyType = 1; remoteGlobalIDString = ${phone.id}; remoteInfo = PerfectRush;`);
 add(dependency,`isa = PBXTargetDependency; target = ${phone.id}; targetProxy = ${proxy};`);
-for(const t of definitions) add(t.id, `isa = PBXNativeTarget; buildConfigurationList = ${t.configs}; buildPhases = ${list([t.sources,t.frameworks,t.resources])}; buildRules = (); dependencies = ${list(t===test?[dependency]:[])}; name = ${t.name}; productName = ${t.name}; productReference = ${t.product}; productType = ${quote('com.apple.product-type.'+t.kind)};`);
+// Chaque application contient son extension WidgetKit dans le dossier PlugIns.
+for(const t of definitions) {
+  const dependencies = t===test ? [dependency] : [];
+  const phases = [t.sources,t.frameworks,t.resources];
+  for(const widget of definitions.filter(item=>item.parent===t.name)) {
+    const widgetProxy=id(), widgetDependency=id(), embedFile=id(), embedPhase=id();
+    add(widgetProxy,`isa = PBXContainerItemProxy; containerPortal = ${project}; proxyType = 1; remoteGlobalIDString = ${widget.id}; remoteInfo = ${widget.name};`);
+    add(widgetDependency,`isa = PBXTargetDependency; target = ${widget.id}; targetProxy = ${widgetProxy};`);
+    add(embedFile,`isa = PBXBuildFile; fileRef = ${widget.product}; settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); };`);
+    add(embedPhase,`isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (${embedFile},); name = "Embed Widgets"; runOnlyForDeploymentPostprocessing = 0;`);
+    dependencies.push(widgetDependency);
+    phases.push(embedPhase);
+  }
+  add(t.id, `isa = PBXNativeTarget; buildConfigurationList = ${t.configs}; buildPhases = ${list(phases)}; buildRules = (); dependencies = ${list(dependencies)}; name = ${t.name}; productName = ${t.name}; productReference = ${t.product}; productType = ${quote('com.apple.product-type.'+t.kind)};`);
+}
 add(main,`isa = PBXGroup; children = ${list([...refs.values(),products])}; sourceTree = "<group>";`);
 add(products,`isa = PBXGroup; children = ${list(definitions.map(t=>t.product))}; name = Products; sourceTree = "<group>";`);
 const pc=[];
