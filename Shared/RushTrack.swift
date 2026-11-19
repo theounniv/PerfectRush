@@ -1,3 +1,5 @@
+// Projet de cours — Théo BOREL et Lana SCHMITT.
+// Dessine la piste, la zone cible et le curseur blanc.
 import SwiftUI
 
 struct RushTrack: View {
@@ -6,7 +8,9 @@ struct RushTrack: View {
     private var tint: Color { engine.isFever ? .orange : .mint }
 
     var body: some View {
+        // GeometryReader donne la taille disponible pour adapter le dessin.
         GeometryReader { geometry in
+            // Le moteur utilise 0 à 1 ; on convertit ici en points d’écran.
             let width = max(1, geometry.size.width - 16)
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.08))
