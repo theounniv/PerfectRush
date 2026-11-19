@@ -1,3 +1,5 @@
+// Projet de cours — Théo BOREL et Lana SCHMITT.
+// Tests du moteur : préparer une partie, agir, vérifier le résultat.
 import XCTest
 #if canImport(RushCore)
 @testable import RushCore
@@ -6,6 +8,8 @@ import XCTest
 #endif
 
 final class GameEngineTests: XCTestCase {
+    // Aide des tests : avancer exactement au centre de la cible.
+    // inout permet à cette fonction de modifier la partie passée en argument.
     private func perfect(_ game: inout GameEngine) {
         game.advance(by: game.targetCenter / game.speed)
         XCTAssertEqual(game.tap(), .perfect)
