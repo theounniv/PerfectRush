@@ -3,6 +3,7 @@
 import Foundation
 import Combine
 import UIKit
+import AuthenticationServices
 import FirebaseCore
 import FirebaseAuth
 import GoogleSignIn
@@ -21,6 +22,8 @@ final class AuthManager: ObservableObject {
     // Faux si GoogleService-Info.plist manque : l'écran l'explique au lieu de planter.
     let isConfigured: Bool
     private var listener: AuthStateDidChangeListenerHandle?
+    // Nonce brut de la demande Apple en cours, gardé dans l'app.
+    private var currentNonce: String?
 
     init() {
         isConfigured = FirebaseApp.app() != nil
@@ -75,6 +78,35 @@ final class AuthManager: ObservableObject {
         }
     }
 
+    // MARK: Apple
+
+    // Appelé quand le joueur touche le bouton Apple, juste avant l'ouverture de la fenêtre.
+    func prepareAppleRequest(_ request: ASAuthorizationAppleIDRequest) {
+        let nonce = AuthRules.randomNonce()
+        currentNonce = nonce
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = AuthRules.sha256(nonce)
+    }
+
+    func completeApple(_ result: Result<ASAuthorization, Error>) async {
+        switch result {
+        case .failure(let error):
+            report(error)
+        case .success(let authorization):
+            guard let appleCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let nonce = currentNonce,
+                  let tokenData = appleCredential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8) else {
+                errorMessage = "Apple n’a pas renvoyé de jeton valide. Réessaie."
+                return
+            }
+            let credential = OAuthProvider.appleCredential(withIDToken: idToken, rawNonce: nonce,
+                                                           fullName: appleCredential.fullName)
+            await perform { _ = try await Auth.auth().signIn(with: credential) }
+            currentNonce = nil
+        }
+    }
+
     // MARK: Déconnexion
 
     func signOut() {
@@ -118,8 +150,9 @@ final class AuthManager: ObservableObject {
     }
 
     private func report(_ error: Error) {
-        // Fermer la fenêtre Google n'est pas une erreur à afficher.
+        // Fermer la fenêtre Google ou Apple n'est pas une erreur à afficher.
         if let googleError = error as? GIDSignInError, googleError.code == .canceled { return }
+        if let appleError = error as? ASAuthorizationError, appleError.code == .canceled { return }
         if let flowError = error as? AuthFlowError {
             errorMessage = flowError.message
             return
