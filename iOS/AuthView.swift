@@ -1,6 +1,7 @@
 // Projet de cours — Théo BOREL et Lana SCHMITT.
-// Écran de connexion : email et Google.
+// Écran de connexion : email, Google et Apple.
 import SwiftUI
+import AuthenticationServices
 import GoogleSignInSwift
 
 struct AuthView: View {
@@ -100,6 +101,14 @@ struct AuthView: View {
                 Task { await auth.signInWithGoogle() }
             }
             .accessibilityLabel("Continuer avec Google")
+            // Le bouton officiel Apple prépare la demande puis reçoit la réponse.
+            SignInWithAppleButton(.continue) { request in
+                auth.prepareAppleRequest(request)
+            } onCompletion: { result in
+                Task { await auth.completeApple(result) }
+            }
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 50)
         }
     }
 

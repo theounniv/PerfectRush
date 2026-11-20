@@ -48,6 +48,8 @@ for (const file of new Set(definitions.flatMap(t=>t.files))) {
   const key = id(); refs.set(file,key);
   add(key, `isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ${quote(file)}; sourceTree = SOURCE_ROOT;`);
 }
+const entitlements = id();
+add(entitlements, `isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "iOS/PerfectRush.entitlements"; sourceTree = SOURCE_ROOT;`);
 for (const t of definitions) {
   t.id = id(); t.product = id(); t.configs = id(); t.sources = id(); t.frameworks=id(); t.resources=id();
   const ext = t.kind === 'application' ? 'app' : t.kind === 'app-extension' ? 'appex' : 'xctest';
@@ -88,8 +90,8 @@ for (const t of definitions) {
       ...(test?{TEST_HOST:'$(BUILT_PRODUCTS_DIR)/PerfectRush.app/PerfectRush',BUNDLE_LOADER:'$(TEST_HOST)'}:{INFOPLIST_KEY_CFBundleDisplayName:'Perfect Rush'}),
       ...(widget?{INFOPLIST_FILE:'Widgets/Info.plist',APPLICATION_EXTENSION_API_ONLY:'YES',SKIP_INSTALL:'YES',LD_RUNPATH_SEARCH_PATHS:'$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks'}:{}),
       ...(t.kind==='application'?{INFOPLIST_KEY_UILaunchScreen_Generation:'YES'}:{}),
-      // Google Sign-In a besoin de -ObjC.
-      ...(t.firebase?{OTHER_LDFLAGS:'$(inherited) -ObjC',ENABLE_USER_SCRIPT_SANDBOXING:'NO'}:{}),
+      // Google Sign-In a besoin de -ObjC ; Sign in with Apple passe par le fichier d'entitlements.
+      ...(t.firebase?{OTHER_LDFLAGS:'$(inherited) -ObjC',CODE_SIGN_ENTITLEMENTS:'iOS/PerfectRush.entitlements',ENABLE_USER_SCRIPT_SANDBOXING:'NO'}:{}),
       ...(t.name==='PerfectRush'?{INFOPLIST_KEY_UIApplicationSceneManifest_Generation:'YES',INFOPLIST_KEY_UISupportedInterfaceOrientations:'UIInterfaceOrientationPortrait',INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad:'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'}:{})
     };
     add(key, `isa = XCBuildConfiguration; buildSettings = { ${Object.entries(settings).map(([k,v])=>`${k} = ${quote(v)};`).join(' ')} }; name = ${config};`);
@@ -115,7 +117,7 @@ for(const t of definitions) {
   }
   add(t.id, `isa = PBXNativeTarget; buildConfigurationList = ${t.configs}; buildPhases = ${list(phases)}; buildRules = (); dependencies = ${list(dependencies)}; name = ${t.name}; productName = ${t.name}; productReference = ${t.product}; packageProductDependencies = ${list(t.productDependencies)}; productType = ${quote('com.apple.product-type.'+t.kind)};`);
 }
-add(main,`isa = PBXGroup; children = ${list([...refs.values(),products])}; sourceTree = "<group>";`);
+add(main,`isa = PBXGroup; children = ${list([...refs.values(),entitlements,products])}; sourceTree = "<group>";`);
 add(products,`isa = PBXGroup; children = ${list(definitions.map(t=>t.product))}; name = Products; sourceTree = "<group>";`);
 const pc=[];
 for(const config of ['Debug','Release']) {const key=id();pc.push(key);add(key,`isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; SWIFT_VERSION = 5.0; }; name = ${config};`);}
