@@ -4,6 +4,8 @@ import SwiftUI
 import Combine
 
 struct PhoneGameView: View {
+    // Compte connecté, fourni par ContentView.
+    @ObservedObject var auth: AuthManager
     // SwiftUI conserve ce modèle pendant la vie de cet écran.
     @StateObject private var model = GameModel()
     @State private var showRewards = false
@@ -65,6 +67,7 @@ struct PhoneGameView: View {
                         Toggle("Vibrations", isOn: $model.haptics).font(.caption).tint(accent)
                         Text("3 Perfect = Fever · 1 bouclier par partie")
                             .font(.caption2).foregroundStyle(.secondary)
+                        account
                     }
                     .padding(24)
                     .frame(maxWidth: 560)
@@ -99,6 +102,24 @@ struct PhoneGameView: View {
         }
         .buttonStyle(.plain)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: model.rewards.balance)
+    }
+
+    // Compte connecté et déconnexion : la partie est mise en pause avant de quitter.
+    private var account: some View {
+        HStack(spacing: 12) {
+            Label(auth.accountLabel, systemImage: "person.crop.circle.fill")
+                .lineLimit(1).truncationMode(.middle)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Se déconnecter") {
+                model.pause()
+                auth.signOut()
+            }
+            .tint(accent)
+        }
+        .font(.caption)
+        .padding(14)
+        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var header: some View {
