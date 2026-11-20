@@ -1,6 +1,7 @@
 // Projet de cours — Théo BOREL et Lana SCHMITT.
-// Écran de connexion par email et mot de passe.
+// Écran de connexion : email et Google.
 import SwiftUI
+import GoogleSignInSwift
 
 struct AuthView: View {
     // L'état de connexion vient du gestionnaire partagé.
@@ -27,6 +28,8 @@ struct AuthView: View {
                     .padding(.top, 30)
 
                     emailForm
+                    separator
+                    providerButtons
 
                     if auth.isLoading { ProgressView().tint(accent) }
                     if let message = auth.errorMessage {
@@ -80,6 +83,23 @@ struct AuthView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(accent, lineWidth: 1.5))
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    private var separator: some View {
+        HStack {
+            Rectangle().fill(.white.opacity(0.15)).frame(height: 1)
+            Text("ou").font(.caption).foregroundStyle(.secondary)
+            Rectangle().fill(.white.opacity(0.15)).frame(height: 1)
+        }
+    }
+
+    private var providerButtons: some View {
+        VStack(spacing: 12) {
+            GoogleSignInButton(scheme: .dark, style: .wide) {
+                Task { await auth.signInWithGoogle() }
+            }
+            .accessibilityLabel("Continuer avec Google")
         }
     }
 

@@ -2,6 +2,7 @@
 // Point d'entrée de l'application iPhone.
 import SwiftUI
 import FirebaseCore
+import GoogleSignIn
 
 @main
 struct PerfectRushApp: App {
@@ -18,6 +19,8 @@ struct PerfectRushApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(.dark)
+                // Google rouvre l'app avec une URL : on la lui transmet pour finir la connexion.
+                .onOpenURL { url in GIDSignIn.sharedInstance.handle(url) }
         }
     }
 }
