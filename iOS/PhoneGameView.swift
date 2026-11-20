@@ -8,11 +8,14 @@ struct PhoneGameView: View {
     @ObservedObject var auth: AuthManager
     // SwiftUI conserve ce modèle pendant la vie de cet écran.
     @StateObject private var model: GameModel
+    // Envoie la progression de ce compte dans Firestore.
+    @StateObject private var sync: ProgressSync
 
-    // Le modèle est créé pour le compte connecté (uid Firebase) : chacun a sa progression.
+    // Le modèle et la synchronisation sont créés pour le compte connecté (uid Firebase).
     init(auth: AuthManager, uid: String) {
         _auth = ObservedObject(wrappedValue: auth)
         _model = StateObject(wrappedValue: GameModel(accountID: uid))
+        _sync = StateObject(wrappedValue: ProgressSync(uid: uid))
     }
     @State private var showRewards = false
     // Permet de mettre en pause quand on quitte l’application.
@@ -82,7 +85,14 @@ struct PhoneGameView: View {
             }
         }
         .onReceive(clock) { _ in model.frame() }
-        .onChange(of: scenePhase) { _, phase in if phase != .active { model.pause() } }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                model.pause()
+                Task { await sync.flush() }
+            }
+        }
+        // À l'ouverture, on récupère la progression du compte depuis le cloud.
+        .task { await sync.attach(model) }
         .sheet(isPresented: $showRewards) { RewardsView(model: model) }
     }
 
@@ -113,13 +123,20 @@ struct PhoneGameView: View {
     // Compte connecté et déconnexion : la partie est mise en pause avant de quitter.
     private var account: some View {
         HStack(spacing: 12) {
-            Label(auth.accountLabel, systemImage: "person.crop.circle.fill")
-                .lineLimit(1).truncationMode(.middle)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Label(auth.accountLabel, systemImage: "person.crop.circle.fill")
+                    .lineLimit(1).truncationMode(.middle)
+                Text(sync.status).font(.caption2)
+            }
+            .foregroundStyle(.secondary)
             Spacer()
             Button("Se déconnecter") {
                 model.pause()
-                auth.signOut()
+                // On envoie la dernière progression avant de quitter le compte.
+                Task {
+                    await sync.flush()
+                    auth.signOut()
+                }
             }
             .tint(accent)
         }

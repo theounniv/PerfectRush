@@ -13,7 +13,7 @@ const list = a => `(${a.join(',')}${a.length ? ',' : ''})`;
 const project = id(), main = id(), products = id(), projectConfigs = id();
 // Paquets Swift Package Manager utilisés seulement par l'app iPhone (authentification).
 const packages = [
-  {key:id(), url:'https://github.com/firebase/firebase-ios-sdk.git', version:'12.0.0', products:['FirebaseCore','FirebaseAuth']},
+  {key:id(), url:'https://github.com/firebase/firebase-ios-sdk.git', version:'12.0.0', products:['FirebaseCore','FirebaseAuth','FirebaseFirestore']},
   {key:id(), url:'https://github.com/google/GoogleSignIn-iOS.git', version:'9.0.0', products:['GoogleSignIn','GoogleSignInSwift']}
 ];
 for (const p of packages) add(p.key, `isa = XCRemoteSwiftPackageReference; repositoryURL = ${quote(p.url)}; requirement = { kind = upToNextMajorVersion; minimumVersion = ${quote(p.version)}; };`);
@@ -37,7 +37,7 @@ const firebaseScript = [
 ].join(String.fromCharCode(10));
 const commonFiles = ['Sources/RushCore/GameEngine.swift', 'Sources/RushCore/RewardsProgress.swift', 'Sources/RushCore/SavedProgress.swift', 'Shared/GameModel.swift', 'Shared/RushTrack.swift', 'Shared/RewardsView.swift'];
 const definitions = [
-  {name:'PerfectRush', files:[...commonFiles, 'Sources/RushCore/AuthRules.swift', 'iOS/PerfectRushApp.swift', 'iOS/ContentView.swift', 'iOS/AuthManager.swift', 'iOS/AuthView.swift', 'iOS/PhoneGameView.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush', kind:'application', packages, firebase:true},
+  {name:'PerfectRush', files:[...commonFiles, 'Sources/RushCore/AuthRules.swift', 'iOS/PerfectRushApp.swift', 'iOS/ContentView.swift', 'iOS/AuthManager.swift', 'iOS/AuthView.swift', 'iOS/ProgressSync.swift', 'iOS/PhoneGameView.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush', kind:'application', packages, firebase:true},
   {name:'PerfectRushWatch', files:[...commonFiles, 'Watch/PerfectRushWatchApp.swift', 'Watch/WatchGameView.swift'], sdk:'watchos', platforms:'watchos watchsimulator', family:'4', bundle:'fr.theounniv.perfectrush.watch', kind:'application'},
   {name:'PerfectRushTests', files:['Tests/RushCoreTests/GameEngineTests.swift', 'Tests/RushCoreTests/RewardsProgressTests.swift', 'Tests/RushCoreTests/AuthRulesTests.swift', 'Tests/RushCoreTests/SavedProgressTests.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.tests', kind:'bundle.unit-test'},
   {name:'PerfectRushWidget', files:['Widgets/PerfectRushWidget.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.widget', kind:'app-extension', parent:'PerfectRush'},
