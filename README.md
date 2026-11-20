@@ -55,7 +55,7 @@ Le décor de tour indique la progression par cycles de six étages ; le compteur
 
 ## Tests
 
-40 tests unitaires couvrent les règles partagées, l’économie fictive et les règles de connexion, dont les régressions sur les limites de cible, le redémarrage, la pause, l’expiration de Fever, les doubles appuis et les pas de temps invalides.
+44 tests unitaires couvrent les règles partagées, l’économie fictive, les règles de connexion et la synchronisation de la progression, dont les régressions sur les limites de cible, le redémarrage, la pause, l’expiration de Fever, les doubles appuis et les pas de temps invalides.
 
 ### Dans Xcode
 
@@ -87,7 +87,9 @@ Le package teste le moteur seul sans SwiftUI et sans simulateur.
 
 - Sources/RushCore/GameEngine.swift : règles déterministes, indépendantes de l’interface.
 - Sources/RushCore/AuthRules.swift : vérification des champs, messages d’erreur et nonce Apple, testables sans Firebase.
+- Sources/RushCore/SavedProgress.swift : progression d’un compte et choix entre la copie de l’iPhone et celle du cloud.
 - iOS/AuthManager.swift, AuthView.swift, ContentView.swift : authentification Firebase de l’app iPhone.
+- iOS/ProgressSync.swift : envoi et lecture de la progression du compte dans Firestore.
 - Shared/GameModel.swift : état observable, temps réel, sauvegarde du record et vibrations.
 - Shared/RushTrack.swift : piste commune et curseur.
 - iOS/ : app et écran iPhone.
@@ -101,7 +103,7 @@ Le package teste le moteur seul sans SwiftUI et sans simulateur.
 ~~~bash
 git status
 git diff
-git add Package.swift Sources Shared iOS Watch Widgets Tests PerfectRush.xcodeproj tools
+git add Package.swift firestore.rules Sources Shared iOS Watch Widgets Tests PerfectRush.xcodeproj tools
 git commit -m "Améliore Perfect Rush"
 git push
 ~~~
@@ -205,11 +207,24 @@ Pour mettre à jour la copie sur le Mac : enregistrer ses changements éventuels
 
 L’app iPhone affiche d’abord un écran de connexion. Trois méthodes : **email et mot de passe**, **Google** et **Apple**. Une fois connecté, le jeu s’ouvre ; le compte et le bouton **Se déconnecter** sont en bas de l’écran. La connexion est mémorisée par Firebase : relancer l’app ne la redemande pas.
 
-L’app Watch et les widgets ne changent pas : ils restent jouables sans compte. Le portefeuille fictif, les défis et les couleurs restent enregistrés **sur l’appareil**, pas dans le compte : deux comptes sur le même iPhone voient la même progression.
+L’app Watch et les widgets ne changent pas : ils restent jouables sans compte, avec une progression locale.
+
+### Progression liée au compte
+
+Sur iPhone, le **record, le portefeuille fictif, les défis et les couleurs** appartiennent au compte connecté :
+
+- Chaque compte a sa propre copie sur l’iPhone : deux comptes sur le même téléphone ont chacun leur progression.
+- La progression est aussi enregistrée dans **Firestore**, document `players/{uid}` : se connecter sur un autre iPhone la retrouve.
+- L’envoi a lieu 2 secondes après le dernier gain, après un achat, à la pause, au passage en arrière-plan et avant la déconnexion. Sans réseau, on continue de jouer : Firestore garde les envois en attente.
+- À l’ouverture du jeu, l’app compare la copie de l’iPhone et celle du cloud : la plus récente gagne pour le portefeuille, les défis et les couleurs ; le record garde la meilleure valeur des deux.
+- La progression jouée avant l’ajout des comptes est donnée au **premier compte** qui se connecte sur l’iPhone.
+- Le réglage Vibrations reste propre à l’appareil.
+
+Sous le compte, en bas du jeu, une ligne indique l’état : « Progression liée au compte », « Sauvegarde… » ou « Hors ligne ».
 
 ### Ce qui est déjà fait dans le projet
 
-- Paquets Swift : `FirebaseCore` et `FirebaseAuth` (firebase-ios-sdk 12.x), `GoogleSignIn` et `GoogleSignInSwift` (GoogleSignIn-iOS 9.x). Xcode les télécharge à la première ouverture : patiente jusqu’à la fin de « Resolving Package Graph ».
+- Paquets Swift : `FirebaseCore`, `FirebaseAuth` et `FirebaseFirestore` (firebase-ios-sdk 12.x), `GoogleSignIn` et `GoogleSignInSwift` (GoogleSignIn-iOS 9.x). Xcode les télécharge à la première ouverture : patiente jusqu’à la fin de « Resolving Package Graph ».
 - `Other Linker Flags = -ObjC` et la capacité **Sign in with Apple** (`iOS/PerfectRush.entitlements`).
 - Une phase de build **Firebase : configuration** copie `iOS/GoogleService-Info.plist` dans l’app et ajoute automatiquement l’URL Scheme `REVERSED_CLIENT_ID` pour Google. Rien à saisir dans l’onglet Info.
 - `FirebaseApp.configure()` dans `PerfectRushApp.init()` et `onOpenURL` pour le retour de Google.
@@ -220,8 +235,9 @@ Le projet Xcode est généré par `tools/generate-project.cjs` : une modificatio
 
 1. Sur https://console.firebase.google.com, crée un projet (Google Analytics inutile), puis ajoute une app **iOS** avec le Bundle Identifier **`fr.theounniv.perfectrush`** (exactement celui de Xcode ; si tu le changes pour installer sur ton iPhone, utilise le nouveau partout).
 2. **Authentication > Sign-in method** : active **Email/Password**, **Google** et **Apple**.
-3. Télécharge **après** l’activation de Google le fichier `GoogleService-Info.plist` et place-le exactement ici : **`iOS/GoogleService-Info.plist`** (nom exact, pas de « (2) »). Inutile de le glisser dans Xcode ni de cocher une cible : la phase de build s’en charge. Ce fichier contient des identifiants publics ; on peut le committer pour que les deux membres du groupe l’aient.
-4. Pour Apple (compte Apple Developer Program payant requis) : sur developer.apple.com, active Sign in with Apple pour l’identifiant `fr.theounniv.perfectrush`, crée un Service ID et une clé, puis dans Firebase > Apple renseigne Service ID, Team ID, Key ID, clé privée. URL de retour : `https://VOTRE_PROJECT_ID.firebaseapp.com/__/auth/handler`. Dans Xcode, choisis ton équipe dans Signing & Capabilities.
+3. **Firestore Database > Créer une base de données** (mode production, région proche, par exemple `eur3`). Dans l’onglet **Règles**, colle le contenu du fichier [`firestore.rules`](firestore.rules) puis **Publier** : chaque joueur ne peut lire et écrire que sa propre progression.
+4. Télécharge **après** l’activation de Google le fichier `GoogleService-Info.plist` et place-le exactement ici : **`iOS/GoogleService-Info.plist`** (nom exact, pas de « (2) »). Inutile de le glisser dans Xcode ni de cocher une cible : la phase de build s’en charge. Ce fichier contient des identifiants publics ; on peut le committer pour que les deux membres du groupe l’aient.
+5. Pour Apple (compte Apple Developer Program payant requis) : sur developer.apple.com, active Sign in with Apple pour l’identifiant `fr.theounniv.perfectrush`, crée un Service ID et une clé, puis dans Firebase > Apple renseigne Service ID, Team ID, Key ID, clé privée. URL de retour : `https://VOTRE_PROJECT_ID.firebaseapp.com/__/auth/handler`. Dans Xcode, choisis ton équipe dans Signing & Capabilities.
 
 Sans `GoogleService-Info.plist`, l’app se lance quand même et l’écran de connexion indique le fichier manquant (un avertissement apparaît aussi dans le build).
 
@@ -235,5 +251,9 @@ Sans compte développeur payant : Email et Google fonctionnent sur simulateur. P
 4. **Déconnexion** : la partie se met en pause et l’écran de connexion revient immédiatement.
 5. Relancer l’app connectée : le jeu s’ouvre directement.
 6. Fermer la fenêtre Google ou Apple sans choisir : aucun message d’erreur.
+7. **Progression** : gagner quelques centimes fictifs avec le compte A, se déconnecter, se connecter avec le compte B : solde à zéro. Revenir sur A : le solde est retrouvé.
+8. Avec A, acheter une couleur puis vérifier dans la console Firebase (Firestore > `players`) que le document de A est à jour.
+9. Supprimer l’app, la réinstaller, se reconnecter avec A : record, solde et couleurs reviennent.
+10. Mode Avion : jouer, revenir en ligne, mettre en pause : la ligne d’état repasse à « Progression liée au compte ».
 
 En cas d’échec, lis le message complet dans la console Xcode (ligne « Erreur d’authentification »). Causes fréquentes : fournisseur non activé dans Firebase, Bundle Identifier différent, ancien `GoogleService-Info.plist` sans `CLIENT_ID`.
