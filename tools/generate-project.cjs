@@ -105,7 +105,7 @@ add(dependency,`isa = PBXTargetDependency; target = ${phone.id}; targetProxy = $
 // Chaque application contient son extension WidgetKit dans le dossier PlugIns.
 for(const t of definitions) {
   const dependencies = t===test ? [dependency] : [];
-  const phases = [t.sources,t.frameworks,t.resources,...(t.script?[t.script]:[])];
+  const phases = [t.sources,t.frameworks,t.resources];
   for(const widget of definitions.filter(item=>item.parent===t.name)) {
     const widgetProxy=id(), widgetDependency=id(), embedFile=id(), embedPhase=id();
     add(widgetProxy,`isa = PBXContainerItemProxy; containerPortal = ${project}; proxyType = 1; remoteGlobalIDString = ${widget.id}; remoteInfo = ${widget.name};`);
@@ -115,6 +115,9 @@ for(const t of definitions) {
     dependencies.push(widgetDependency);
     phases.push(embedPhase);
   }
+  // Le script Firebase modifie l'Info.plist final : il doit passer après la copie du widget,
+  // sinon Xcode signale un cycle (Info.plist attend le widget, le widget attend le script).
+  if (t.script) phases.push(t.script);
   add(t.id, `isa = PBXNativeTarget; buildConfigurationList = ${t.configs}; buildPhases = ${list(phases)}; buildRules = (); dependencies = ${list(dependencies)}; name = ${t.name}; productName = ${t.name}; productReference = ${t.product}; packageProductDependencies = ${list(t.productDependencies)}; productType = ${quote('com.apple.product-type.'+t.kind)};`);
 }
 add(main,`isa = PBXGroup; children = ${list([...refs.values(),entitlements,products])}; sourceTree = "<group>";`);
