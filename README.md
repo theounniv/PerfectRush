@@ -2,11 +2,11 @@
 
 Projet de cours — **Théo BOREL et Lana SCHMITT**.
 
-Mini-jeu de précision en SwiftUI pour **iPhone et Apple Watch**. Deux apps autonomes, un moteur de règles commun, aucun compte ni serveur.
+Mini-jeu de précision en SwiftUI pour **iPhone et Apple Watch**. Deux apps autonomes et un moteur de règles commun. L’app iPhone demande une connexion Firebase (email, Google ou Apple) ; l’app Watch et les widgets restent sans compte.
 
 ## Sur ton Mac : installation de zéro
 
-1. Ouvre Xcode et termine l’installation de ses composants. Ce projet cible iOS 17 et watchOS 10 ; Xcode 15 minimum, une version récente compatible avec ton macOS est préférable.
+1. Ouvre Xcode et termine l’installation de ses composants. Ce projet cible iOS 17 et watchOS 10 ; **Xcode 16.3 minimum** (exigé par le SDK Firebase), une version récente compatible avec ton macOS est préférable.
 2. Dans les réglages Xcode, installe un simulateur iOS et un simulateur watchOS si nécessaire.
 3. Ouvre Terminal et exécute, ligne par ligne :
 
@@ -55,7 +55,7 @@ Le décor de tour indique la progression par cycles de six étages ; le compteur
 
 ## Tests
 
-32 tests unitaires couvrent les règles partagées et l’économie fictive, dont les régressions sur les limites de cible, le redémarrage, la pause, l’expiration de Fever, les doubles appuis et les pas de temps invalides.
+40 tests unitaires couvrent les règles partagées, l’économie fictive et les règles de connexion, dont les régressions sur les limites de cible, le redémarrage, la pause, l’expiration de Fever, les doubles appuis et les pas de temps invalides.
 
 ### Dans Xcode
 
@@ -86,6 +86,8 @@ Le package teste le moteur seul sans SwiftUI et sans simulateur.
 ## Structure
 
 - Sources/RushCore/GameEngine.swift : règles déterministes, indépendantes de l’interface.
+- Sources/RushCore/AuthRules.swift : vérification des champs, messages d’erreur et nonce Apple, testables sans Firebase.
+- iOS/AuthManager.swift, AuthView.swift, ContentView.swift : authentification Firebase de l’app iPhone.
 - Shared/GameModel.swift : état observable, temps réel, sauvegarde du record et vibrations.
 - Shared/RushTrack.swift : piste commune et curseur.
 - iOS/ : app et écran iPhone.
@@ -99,7 +101,7 @@ Le package teste le moteur seul sans SwiftUI et sans simulateur.
 ~~~bash
 git status
 git diff
-git add Sources Shared iOS Watch Widgets Tests PerfectRush.xcodeproj
+git add Package.swift Sources Shared iOS Watch Widgets Tests PerfectRush.xcodeproj tools
 git commit -m "Améliore Perfect Rush"
 git push
 ~~~
@@ -198,3 +200,40 @@ La progression est locale à chaque appareil et peut disparaître si l’app est
 9. Vérifier le libellé du solde fictif et l’option Réduire les animations sur iPhone.
 
 Pour mettre à jour la copie sur le Mac : enregistrer ses changements éventuels, puis exécuter git pull dans le dossier PerfectRush et rouvrir le projet.
+
+## Authentification Firebase (iPhone)
+
+L’app iPhone affiche d’abord un écran de connexion. Trois méthodes : **email et mot de passe**, **Google** et **Apple**. Une fois connecté, le jeu s’ouvre ; le compte et le bouton **Se déconnecter** sont en bas de l’écran. La connexion est mémorisée par Firebase : relancer l’app ne la redemande pas.
+
+L’app Watch et les widgets ne changent pas : ils restent jouables sans compte. Le portefeuille fictif, les défis et les couleurs restent enregistrés **sur l’appareil**, pas dans le compte : deux comptes sur le même iPhone voient la même progression.
+
+### Ce qui est déjà fait dans le projet
+
+- Paquets Swift : `FirebaseCore` et `FirebaseAuth` (firebase-ios-sdk 12.x), `GoogleSignIn` et `GoogleSignInSwift` (GoogleSignIn-iOS 9.x). Xcode les télécharge à la première ouverture : patiente jusqu’à la fin de « Resolving Package Graph ».
+- `Other Linker Flags = -ObjC` et la capacité **Sign in with Apple** (`iOS/PerfectRush.entitlements`).
+- Une phase de build **Firebase : configuration** copie `iOS/GoogleService-Info.plist` dans l’app et ajoute automatiquement l’URL Scheme `REVERSED_CLIENT_ID` pour Google. Rien à saisir dans l’onglet Info.
+- `FirebaseApp.configure()` dans `PerfectRushApp.init()` et `onOpenURL` pour le retour de Google.
+
+Le projet Xcode est généré par `tools/generate-project.cjs` : une modification faite à la main dans les réglages de cible serait perdue à la prochaine génération. Les réglages Firebase sont donc écrits dans ce script.
+
+### À faire une fois dans la console Firebase
+
+1. Sur https://console.firebase.google.com, crée un projet (Google Analytics inutile), puis ajoute une app **iOS** avec le Bundle Identifier **`fr.theounniv.perfectrush`** (exactement celui de Xcode ; si tu le changes pour installer sur ton iPhone, utilise le nouveau partout).
+2. **Authentication > Sign-in method** : active **Email/Password**, **Google** et **Apple**.
+3. Télécharge **après** l’activation de Google le fichier `GoogleService-Info.plist` et place-le exactement ici : **`iOS/GoogleService-Info.plist`** (nom exact, pas de « (2) »). Inutile de le glisser dans Xcode ni de cocher une cible : la phase de build s’en charge. Ce fichier contient des identifiants publics ; on peut le committer pour que les deux membres du groupe l’aient.
+4. Pour Apple (compte Apple Developer Program payant requis) : sur developer.apple.com, active Sign in with Apple pour l’identifiant `fr.theounniv.perfectrush`, crée un Service ID et une clé, puis dans Firebase > Apple renseigne Service ID, Team ID, Key ID, clé privée. URL de retour : `https://VOTRE_PROJECT_ID.firebaseapp.com/__/auth/handler`. Dans Xcode, choisis ton équipe dans Signing & Capabilities.
+
+Sans `GoogleService-Info.plist`, l’app se lance quand même et l’écran de connexion indique le fichier manquant (un avertissement apparaît aussi dans le build).
+
+Sans compte développeur payant : Email et Google fonctionnent sur simulateur. Pour installer sur un iPhone avec un compte gratuit, retire temporairement la capacité Sign in with Apple, refusée par les équipes personnelles.
+
+### Essais manuels
+
+1. **Email** : créer un compte (mot de passe ≥ 6 caractères), se déconnecter, se reconnecter. Tester un mauvais mot de passe et un email déjà utilisé : message en français.
+2. **Google** : bouton Google, choisir un compte, vérifier l’email affiché en bas du jeu.
+3. **Apple** : bouton Apple, autoriser. Sur simulateur, il faut être connecté à un identifiant Apple dans Réglages ; sinon tester sur un iPhone réel.
+4. **Déconnexion** : la partie se met en pause et l’écran de connexion revient immédiatement.
+5. Relancer l’app connectée : le jeu s’ouvre directement.
+6. Fermer la fenêtre Google ou Apple sans choisir : aucun message d’erreur.
+
+En cas d’échec, lis le message complet dans la console Xcode (ligne « Erreur d’authentification »). Causes fréquentes : fournisseur non activé dans Firebase, Bundle Identifier différent, ancien `GoogleService-Info.plist` sans `CLIENT_ID`.
