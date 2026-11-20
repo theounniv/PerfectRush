@@ -8,8 +8,9 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if auth.isAuthenticated {
-                PhoneGameView(auth: auth)
+            if auth.isAuthenticated, let uid = auth.user?.uid {
+                // .id recrée le jeu si un autre compte se connecte : chacun retrouve sa progression.
+                PhoneGameView(auth: auth, uid: uid).id(uid)
             } else {
                 AuthView(auth: auth)
             }

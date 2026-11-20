@@ -7,7 +7,13 @@ struct PhoneGameView: View {
     // Compte connecté, fourni par ContentView.
     @ObservedObject var auth: AuthManager
     // SwiftUI conserve ce modèle pendant la vie de cet écran.
-    @StateObject private var model = GameModel()
+    @StateObject private var model: GameModel
+
+    // Le modèle est créé pour le compte connecté (uid Firebase) : chacun a sa progression.
+    init(auth: AuthManager, uid: String) {
+        _auth = ObservedObject(wrappedValue: auth)
+        _model = StateObject(wrappedValue: GameModel(accountID: uid))
+    }
     @State private var showRewards = false
     // Permet de mettre en pause quand on quitte l’application.
     @Environment(\.scenePhase) private var scenePhase

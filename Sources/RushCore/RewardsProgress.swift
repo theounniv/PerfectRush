@@ -56,7 +56,7 @@ public enum RushChallenge: String, CaseIterable, Codable {
     }
 }
 
-public struct RewardsProgress: Codable {
+public struct RewardsProgress: Codable, Equatable {
     public private(set) var balance = 0
     public private(set) var totalFloors = 0
     public private(set) var totalPerfects = 0
