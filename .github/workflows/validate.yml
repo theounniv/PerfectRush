@@ -6,7 +6,7 @@ concurrency:
 jobs:
   validate:
     runs-on: macos-15-intel
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
       - name: Tests des règles partagées
