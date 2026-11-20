@@ -120,7 +120,9 @@ for(const t of definitions) {
 add(main,`isa = PBXGroup; children = ${list([...refs.values(),entitlements,products])}; sourceTree = "<group>";`);
 add(products,`isa = PBXGroup; children = ${list(definitions.map(t=>t.product))}; name = Products; sourceTree = "<group>";`);
 const pc=[];
-for(const config of ['Debug','Release']) {const key=id();pc.push(key);add(key,`isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; SWIFT_VERSION = 5.0; }; name = ${config};`);}
+// En Debug, on compile seulement l'architecture de la machine (arm64 sur Mac Apple Silicon),
+// comme les paquets Swift : sinon l'app cherche des modules Firebase x86_64 qui n'existent pas.
+for(const config of ['Debug','Release']) {const key=id();pc.push(key);add(key,`isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; ONLY_ACTIVE_ARCH = ${config==='Debug'?'YES':'NO'}; SWIFT_VERSION = 5.0; }; name = ${config};`);}
 add(projectConfigs,`isa = XCConfigurationList; buildConfigurations = ${list(pc)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;`);
 add(project,`isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1500; TargetAttributes = { ${definitions.map(t=>`${t.id} = { CreatedOnToolsVersion = 15.0; ${t===test?`TestTargetID = ${phone.id};`:''} };`).join(' ')} }; }; buildConfigurationList = ${projectConfigs}; compatibilityVersion = "Xcode 14.0"; developmentRegion = fr; hasScannedForEncodings = 0; knownRegions = (fr,en,Base); mainGroup = ${main}; packageReferences = ${list(packages.map(p=>p.key))}; productRefGroup = ${products}; projectDirPath = ""; projectRoot = ""; targets = ${list(definitions.map(t=>t.id))};`);
 const dir=path.join(root,'PerfectRush.xcodeproj');
