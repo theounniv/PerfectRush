@@ -13,10 +13,11 @@ const list = a => `(${a.join(',')}${a.length ? ',' : ''})`;
 const project = id(), main = id(), products = id(), projectConfigs = id();
 // Paquets Swift Package Manager utilisés seulement par l'app iPhone (authentification).
 const packages = [
-  {key:id(), url:'https://github.com/firebase/firebase-ios-sdk.git', version:'12.0.0', products:['FirebaseCore','FirebaseAuth']}
+  {key:id(), url:'https://github.com/firebase/firebase-ios-sdk.git', version:'12.0.0', products:['FirebaseCore','FirebaseAuth']},
+  {key:id(), url:'https://github.com/google/GoogleSignIn-iOS.git', version:'9.0.0', products:['GoogleSignIn','GoogleSignInSwift']}
 ];
 for (const p of packages) add(p.key, `isa = XCRemoteSwiftPackageReference; repositoryURL = ${quote(p.url)}; requirement = { kind = upToNextMajorVersion; minimumVersion = ${quote(p.version)}; };`);
-// Copie GoogleService-Info.plist dans l'app s'il existe.
+// Copie GoogleService-Info.plist (s'il existe) et ajoute l'URL Scheme REVERSED_CLIENT_ID pour Google.
 const firebaseScript = [
   'PLIST="${SRCROOT}/iOS/GoogleService-Info.plist"',
   'if [ ! -f "$PLIST" ]; then',
@@ -24,6 +25,14 @@ const firebaseScript = [
   '  exit 0',
   'fi',
   'cp "$PLIST" "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist"',
+  'INFO="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"',
+  'REVERSED=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" "$PLIST" 2>/dev/null || true)',
+  '/usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$INFO" 2>/dev/null || true',
+  'if [ -n "$REVERSED" ]; then',
+  '  /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" -c "Add :CFBundleURLTypes:0 dict" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $REVERSED" "$INFO"',
+  'else',
+  '  echo "warning: REVERSED_CLIENT_ID absent : active Google dans Firebase puis retelecharge GoogleService-Info.plist."',
+  'fi',
   ''
 ].join(String.fromCharCode(10));
 const commonFiles = ['Sources/RushCore/GameEngine.swift', 'Sources/RushCore/RewardsProgress.swift', 'Shared/GameModel.swift', 'Shared/RushTrack.swift', 'Shared/RewardsView.swift'];
@@ -79,8 +88,8 @@ for (const t of definitions) {
       ...(test?{TEST_HOST:'$(BUILT_PRODUCTS_DIR)/PerfectRush.app/PerfectRush',BUNDLE_LOADER:'$(TEST_HOST)'}:{INFOPLIST_KEY_CFBundleDisplayName:'Perfect Rush'}),
       ...(widget?{INFOPLIST_FILE:'Widgets/Info.plist',APPLICATION_EXTENSION_API_ONLY:'YES',SKIP_INSTALL:'YES',LD_RUNPATH_SEARCH_PATHS:'$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks'}:{}),
       ...(t.kind==='application'?{INFOPLIST_KEY_UILaunchScreen_Generation:'YES'}:{}),
-      // Les scripts de build peuvent lire GoogleService-Info.plist.
-      ...(t.firebase?{ENABLE_USER_SCRIPT_SANDBOXING:'NO'}:{}),
+      // Google Sign-In a besoin de -ObjC.
+      ...(t.firebase?{OTHER_LDFLAGS:'$(inherited) -ObjC',ENABLE_USER_SCRIPT_SANDBOXING:'NO'}:{}),
       ...(t.name==='PerfectRush'?{INFOPLIST_KEY_UIApplicationSceneManifest_Generation:'YES',INFOPLIST_KEY_UISupportedInterfaceOrientations:'UIInterfaceOrientationPortrait',INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad:'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'}:{})
     };
     add(key, `isa = XCBuildConfiguration; buildSettings = { ${Object.entries(settings).map(([k,v])=>`${k} = ${quote(v)};`).join(' ')} }; name = ${config};`);
