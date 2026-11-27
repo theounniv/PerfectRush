@@ -40,6 +40,7 @@ const definitions = [
   {name:'PerfectRush', files:[...commonFiles, 'Sources/RushCore/AuthRules.swift', 'iOS/PerfectRushApp.swift', 'iOS/ContentView.swift', 'iOS/RushBackground.swift', 'iOS/AuthManager.swift', 'iOS/AuthView.swift', 'iOS/ProgressSync.swift', 'iOS/PhoneGameView.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush', kind:'application', packages, firebase:true},
   {name:'PerfectRushWatch', files:[...commonFiles, 'Watch/PerfectRushWatchApp.swift', 'Watch/WatchGameView.swift'], sdk:'watchos', platforms:'watchos watchsimulator', family:'4', bundle:'fr.theounniv.perfectrush.watch', kind:'application'},
   {name:'PerfectRushTests', files:['Tests/RushCoreTests/GameEngineTests.swift', 'Tests/RushCoreTests/RewardsProgressTests.swift', 'Tests/RushCoreTests/AuthRulesTests.swift', 'Tests/RushCoreTests/SavedProgressTests.swift', 'Tests/PerfectRushTests/GameModelTests.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.tests', kind:'bundle.unit-test'},
+  {name:'PerfectRushUITests', files:['Tests/PerfectRushUITests/PerfectRushUITests.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.uitests', kind:'bundle.ui-testing'},
   {name:'PerfectRushWidget', files:['Widgets/PerfectRushWidget.swift'], sdk:'iphoneos', platforms:'iphoneos iphonesimulator', family:'1,2', bundle:'fr.theounniv.perfectrush.widget', kind:'app-extension', parent:'PerfectRush'},
   {name:'PerfectRushWatchWidget', files:['Widgets/PerfectRushWidget.swift'], sdk:'watchos', platforms:'watchos watchsimulator', family:'4', bundle:'fr.theounniv.perfectrush.watch.widget', kind:'app-extension', parent:'PerfectRushWatch'}
 ];
@@ -76,6 +77,7 @@ for (const t of definitions) {
   for (const config of ['Debug','Release']) {
     const key=id(); configurations.push(key);
     const test=t.kind==='bundle.unit-test';
+    const uiTest=t.kind==='bundle.ui-testing';
     const widget=t.kind==='app-extension';
     const settings={
       PRODUCT_NAME:'$(TARGET_NAME)', PRODUCT_BUNDLE_IDENTIFIER:t.bundle,
@@ -87,7 +89,9 @@ for (const t of definitions) {
       ENABLE_TESTABILITY:config==='Debug'?'YES':'NO',
       ...(t.sdk==='watchos'?{WATCHOS_DEPLOYMENT_TARGET:'10.0'}:{IPHONEOS_DEPLOYMENT_TARGET:'17.0'}),
       ...(t.name==='PerfectRushWatch'?{INFOPLIST_KEY_WKApplication:'YES',INFOPLIST_KEY_WKWatchOnly:'YES'}:{}),
-      ...(test?{TEST_HOST:'$(BUILT_PRODUCTS_DIR)/PerfectRush.app/PerfectRush',BUNDLE_LOADER:'$(TEST_HOST)'}:{INFOPLIST_KEY_CFBundleDisplayName:'Perfect Rush'}),
+      ...(test?{TEST_HOST:'$(BUILT_PRODUCTS_DIR)/PerfectRush.app/PerfectRush',BUNDLE_LOADER:'$(TEST_HOST)'}:{}),
+      ...(uiTest?{TEST_TARGET_NAME:'PerfectRush'}:{}),
+      ...(!test&&!uiTest?{INFOPLIST_KEY_CFBundleDisplayName:'Perfect Rush'}:{}),
       ...(widget?{INFOPLIST_FILE:'Widgets/Info.plist',APPLICATION_EXTENSION_API_ONLY:'YES',SKIP_INSTALL:'YES',LD_RUNPATH_SEARCH_PATHS:'$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks'}:{}),
       ...(t.kind==='application'?{INFOPLIST_KEY_UILaunchScreen_Generation:'YES'}:{}),
       // Google Sign-In a besoin de -ObjC ; Sign in with Apple passe par le fichier d'entitlements.
@@ -98,13 +102,16 @@ for (const t of definitions) {
   }
   add(t.configs, `isa = XCConfigurationList; buildConfigurations = ${list(configurations)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;`);
 }
-const test=definitions[2], phone=definitions[0];
-const proxy=id(), dependency=id();
-add(proxy, `isa = PBXContainerItemProxy; containerPortal = ${project}; proxyType = 1; remoteGlobalIDString = ${phone.id}; remoteInfo = PerfectRush;`);
-add(dependency,`isa = PBXTargetDependency; target = ${phone.id}; targetProxy = ${proxy};`);
+const phone=definitions[0];
+const testTargets=definitions.filter(t=>t.kind.startsWith('bundle.'));
+for(const t of testTargets) {
+  const proxy=id(); t.appDependency=id();
+  add(proxy, `isa = PBXContainerItemProxy; containerPortal = ${project}; proxyType = 1; remoteGlobalIDString = ${phone.id}; remoteInfo = PerfectRush;`);
+  add(t.appDependency,`isa = PBXTargetDependency; target = ${phone.id}; targetProxy = ${proxy};`);
+}
 // Chaque application contient son extension WidgetKit dans le dossier PlugIns.
 for(const t of definitions) {
-  const dependencies = t===test ? [dependency] : [];
+  const dependencies = t.appDependency ? [t.appDependency] : [];
   const phases = [t.sources,t.frameworks,t.resources];
   for(const widget of definitions.filter(item=>item.parent===t.name)) {
     const widgetProxy=id(), widgetDependency=id(), embedFile=id(), embedPhase=id();
@@ -127,7 +134,7 @@ const pc=[];
 // comme les paquets Swift : sinon l'app cherche des modules Firebase x86_64 qui n'existent pas.
 for(const config of ['Debug','Release']) {const key=id();pc.push(key);add(key,`isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; ONLY_ACTIVE_ARCH = ${config==='Debug'?'YES':'NO'}; SWIFT_VERSION = 5.0; }; name = ${config};`);}
 add(projectConfigs,`isa = XCConfigurationList; buildConfigurations = ${list(pc)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;`);
-add(project,`isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1500; TargetAttributes = { ${definitions.map(t=>`${t.id} = { CreatedOnToolsVersion = 15.0; ${t===test?`TestTargetID = ${phone.id};`:''} };`).join(' ')} }; }; buildConfigurationList = ${projectConfigs}; compatibilityVersion = "Xcode 14.0"; developmentRegion = fr; hasScannedForEncodings = 0; knownRegions = (fr,en,Base); mainGroup = ${main}; packageReferences = ${list(packages.map(p=>p.key))}; productRefGroup = ${products}; projectDirPath = ""; projectRoot = ""; targets = ${list(definitions.map(t=>t.id))};`);
+add(project,`isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1500; TargetAttributes = { ${definitions.map(t=>`${t.id} = { CreatedOnToolsVersion = 15.0; ${testTargets.includes(t)?`TestTargetID = ${phone.id};`:''} };`).join(' ')} }; }; buildConfigurationList = ${projectConfigs}; compatibilityVersion = "Xcode 14.0"; developmentRegion = fr; hasScannedForEncodings = 0; knownRegions = (fr,en,Base); mainGroup = ${main}; packageReferences = ${list(packages.map(p=>p.key))}; productRefGroup = ${products}; projectDirPath = ""; projectRoot = ""; targets = ${list(definitions.map(t=>t.id))};`);
 const dir=path.join(root,'PerfectRush.xcodeproj');
 fs.mkdirSync(path.join(dir,'xcshareddata','xcschemes'),{recursive:true});
 fs.writeFileSync(path.join(dir,'project.pbxproj'),`// !$*UTF8*$!\n{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n${objects.join('\n')}\n}; rootObject = ${project}; }\n`);
@@ -136,7 +143,7 @@ for(const t of definitions.slice(0,2)) {
 const xml=`<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="1500" version="1.3">
 <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">${buildable(t)}</BuildActionEntry></BuildActionEntries></BuildAction>
-<TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables>${t===phone?`<TestableReference skipped="NO">${buildable(test)}</TestableReference>`:''}</Testables></TestAction>
+<TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables>${t===phone?testTargets.map(test=>`<TestableReference skipped="NO">${buildable(test)}</TestableReference>`).join(''):''}</Testables></TestAction>
 <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" allowLocationSimulation="YES"><BuildableProductRunnable runnableDebuggingMode="0">${buildable(t)}</BuildableProductRunnable></LaunchAction>
 <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES"><BuildableProductRunnable runnableDebuggingMode="0">${buildable(t)}</BuildableProductRunnable></ProfileAction>
 <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
