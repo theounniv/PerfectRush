@@ -9,7 +9,8 @@ final class ProgressSync: ObservableObject {
     // Petit texte affiché sous le compte pour savoir où en est la sauvegarde.
     @Published private(set) var status = "Synchronisation…"
 
-    private let document: DocumentReference
+    // nil quand le cloud est désactivé (tests d'interface) : la progression reste sur l'iPhone.
+    private let document: DocumentReference?
     private weak var model: GameModel?
     // Vrai seulement après avoir lu le cloud : sinon on risquerait d'écraser
     // une progression plus récente faite sur un autre iPhone.
@@ -17,19 +18,25 @@ final class ProgressSync: ObservableObject {
     private var isDownloading = false
     private var pendingUpload: Task<Void, Never>?
 
-    init(uid: String) {
-        document = Firestore.firestore().collection("players").document(uid)
+    init(uid: String, cloudSync: Bool = true) {
+        if cloudSync {
+            document = Firestore.firestore().collection("players").document(uid)
+        } else {
+            document = nil
+            status = "Mode test : progression gardée sur l’iPhone"
+        }
     }
 
     // Appelé à l'ouverture du jeu : on compare l'iPhone et le cloud, puis on garde la bonne version.
     func attach(_ model: GameModel) async {
+        guard document != nil else { return }
         self.model = model
         model.onProgressSaved = { [weak self] _ in self?.scheduleUpload() }
         await download()
     }
 
     private func download() async {
-        guard let model, !isDownloading else { return }
+        guard let document, let model, !isDownloading else { return }
         isDownloading = true
         defer { isDownloading = false }
         do {
@@ -64,6 +71,7 @@ final class ProgressSync: ObservableObject {
 
     // Envoie tout de suite : pause, passage en arrière-plan ou déconnexion.
     func flush() async {
+        guard document != nil else { return }
         pendingUpload?.cancel()
         pendingUpload = nil
         if !isReady {
@@ -74,6 +82,7 @@ final class ProgressSync: ObservableObject {
     }
 
     private func upload(_ progress: SavedProgress) {
+        guard let document else { return }
         status = "Sauvegarde…"
         do {
             // Firestore garde l'envoi en file d'attente si le réseau manque.

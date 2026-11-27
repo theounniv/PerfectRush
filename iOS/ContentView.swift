@@ -8,7 +8,11 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if auth.isAuthenticated, let uid = auth.user?.uid {
+            if UITestMode.isActive {
+                // Tests d'interface : on joue directement, sans Firebase ni réseau.
+                PhoneGameView(auth: auth, uid: UITestMode.accountID,
+                              defaults: UITestMode.defaults, cloudSync: false)
+            } else if auth.isAuthenticated, let uid = auth.user?.uid {
                 // .id recrée le jeu si un autre compte se connecte : chacun retrouve sa progression.
                 PhoneGameView(auth: auth, uid: uid).id(uid)
             } else {
@@ -17,4 +21,18 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: auth.isAuthenticated)
     }
+}
+
+// Activé par l'argument « -ui-testing » que passent les tests d'interface (PerfectRushUITests).
+// Chaque lancement repart d'une progression vide, enregistrée à part des vraies données.
+enum UITestMode {
+    static let isActive = ProcessInfo.processInfo.arguments.contains("-ui-testing")
+    static let accountID = "ui-tests"
+
+    static let defaults: UserDefaults = {
+        let suite = "PerfectRushUITests"
+        let defaults = UserDefaults(suiteName: suite) ?? .standard
+        defaults.removePersistentDomain(forName: suite)
+        return defaults
+    }()
 }

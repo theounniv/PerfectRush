@@ -22,7 +22,7 @@ struct RewardsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("TON PORTEFEUILLE").font(.caption.bold())
+                Text("TON PORTEFEUILLE").font(.caption.bold()).accessibilityIdentifier("shopTitle")
                 Text(RewardsProgress.money(model.rewards.balance))
                     .font(.largeTitle.bold()).minimumScaleFactor(0.6)
                 Text("Solde fictif — aucun retrait possible")
@@ -44,6 +44,7 @@ struct RewardsView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Button("Retour au jeu") { dismiss() }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("closeShop")
             }
             .padding()
         }
@@ -79,6 +80,7 @@ struct RewardsView: View {
         .buttonStyle(.bordered)
         .tint(theme.color)
         .disabled(!owned && model.rewards.balance < theme.price)
+        .accessibilityIdentifier("theme-" + theme.rawValue)
     }
 
     private func challengeCard(_ challenge: RushChallenge) -> some View {

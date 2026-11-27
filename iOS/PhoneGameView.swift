@@ -10,19 +10,21 @@ struct PhoneGameView: View {
     @StateObject private var model: GameModel
     // Envoie la progression de ce compte dans Firestore.
     @StateObject private var sync: ProgressSync
-
-    // Le modèle et la synchronisation sont créés pour le compte connecté (uid Firebase).
-    init(auth: AuthManager, uid: String) {
-        _auth = ObservedObject(wrappedValue: auth)
-        _model = StateObject(wrappedValue: GameModel(accountID: uid))
-        _sync = StateObject(wrappedValue: ProgressSync(uid: uid))
-    }
     @State private var showRewards = false
     // Permet de mettre en pause quand on quitte l’application.
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     // Le Timer demande régulièrement de mettre à jour le curseur.
     private let clock = Timer.publish(every: 1.0 / 60, on: .main, in: .common).autoconnect()
+
+    // Le modèle et la synchronisation sont créés pour le compte connecté (uid Firebase).
+    // Les tests d'interface passent leurs propres UserDefaults et désactivent le cloud.
+    init(auth: AuthManager, uid: String, defaults: UserDefaults = .standard, cloudSync: Bool = true) {
+        _auth = ObservedObject(wrappedValue: auth)
+        _model = StateObject(wrappedValue: GameModel(defaults: defaults, accountID: uid))
+        _sync = StateObject(wrappedValue: ProgressSync(uid: uid, cloudSync: cloudSync))
+    }
+
     private var accent: Color {
         if model.engine.isFever { return .orange }
         return model.rewards.selectedTheme.color
@@ -32,17 +34,18 @@ struct PhoneGameView: View {
         // GeometryReader donne la taille disponible pour adapter le dessin.
         GeometryReader { geometry in
             ZStack {
-                LinearGradient(colors: [Color(red: 0.025, green: 0.04, blue: 0.09), .black],
-                               startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
+                RushBackground()
                 ScrollView {
                     VStack(spacing: 24) {
                         header
                         wallet
                         HStack {
                             Label("RECORD \(model.best)", systemImage: "trophy.fill")
+                                .accessibilityIdentifier("bestScore")
                             Spacer()
                             Label(model.engine.shield ? "PRÊT" : "BRISÉ",
                                   systemImage: model.engine.shield ? "shield.fill" : "shield.slash")
+                                .accessibilityIdentifier("shield")
                         }
                         .font(.caption.bold()).foregroundStyle(.white.opacity(0.65))
                         VStack(spacing: 2) {
@@ -74,6 +77,7 @@ struct PhoneGameView: View {
                         .padding(22).background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 26))
                         controls
                         Toggle("Vibrations", isOn: $model.haptics).font(.caption).tint(accent)
+                            .accessibilityIdentifier("haptics")
                         Text("3 Perfect = Fever · 1 bouclier par partie")
                             .font(.caption2).foregroundStyle(.secondary)
                         account
@@ -117,6 +121,7 @@ struct PhoneGameView: View {
             .background(accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 20))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("wallet")
         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: model.rewards.balance)
     }
 
@@ -126,7 +131,7 @@ struct PhoneGameView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Label(auth.accountLabel, systemImage: "person.crop.circle.fill")
                     .lineLimit(1).truncationMode(.middle)
-                Text(sync.status).font(.caption2)
+                Text(sync.status).font(.caption2).accessibilityIdentifier("syncStatus")
             }
             .foregroundStyle(.secondary)
             Spacer()
@@ -139,6 +144,7 @@ struct PhoneGameView: View {
                 }
             }
             .tint(accent)
+            .accessibilityIdentifier("signOut")
         }
         .font(.caption)
         .padding(14)
@@ -155,10 +161,14 @@ struct PhoneGameView: View {
             if model.engine.phase == .playing {
                 Button { model.pause() } label: {
                     Image(systemName: "pause.fill").padding(14).background(.white.opacity(0.08), in: Circle())
-                }.accessibilityLabel("Mettre en pause").tint(.white)
+                }
+                .accessibilityLabel("Mettre en pause")
+                .accessibilityIdentifier("pause")
+                .tint(.white)
             }
         }
     }
+
     // Décor uniquement : les vraies règles restent dans GameEngine.
     private var tower: some View {
         VStack(spacing: 5) {
@@ -171,28 +181,33 @@ struct PhoneGameView: View {
         .animation(reduceMotion ? nil : .spring(response: 0.25), value: model.engine.floor)
         .accessibilityHidden(true)
     }
+
     // Chaque état de partie propose le bon bouton.
     @ViewBuilder private var controls: some View {
         switch model.engine.phase {
         case .ready:
-            primary("JOUER", icon: "play.fill") { model.start() }
+            primary("JOUER", icon: "play.fill", id: "play") { model.start() }
         case .playing:
-            primary("TAP", icon: "hand.tap.fill") { model.tap() }
+            primary("TAP", icon: "hand.tap.fill", id: "tap") { model.tap() }
         case .paused:
-            Text("EN PAUSE").font(.headline)
-            primary("REPRENDRE", icon: "play.fill") { model.resume() }
+            Text("EN PAUSE").font(.headline).accessibilityIdentifier("pausedLabel")
+            primary("REPRENDRE", icon: "play.fill", id: "resume") { model.resume() }
         case .gameOver:
             Text("Partie terminée · \(model.engine.floor) étages").font(.headline)
             Text("Gains conservés : " + RewardsProgress.money(model.runRewardCents) + " fictifs")
                 .font(.subheadline).foregroundStyle(accent)
-            primary("REJOUER", icon: "arrow.clockwise") { model.start() }
+            primary("REJOUER", icon: "arrow.clockwise", id: "replay") { model.start() }
         }
     }
-    private func primary(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+
+    // L'identifiant d'accessibilité permet aux tests d'interface de trouver le bouton.
+    private func primary(_ title: String, icon: String, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: icon).font(.title3.bold()).tracking(2)
                 .frame(maxWidth: .infinity).padding(.vertical, 22)
                 .foregroundStyle(.black).background(accent, in: RoundedRectangle(cornerRadius: 22))
-        }.buttonStyle(.plain)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
     }
 }

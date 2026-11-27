@@ -13,12 +13,12 @@ struct AuthView: View {
     @FocusState private var focusedField: Field?
 
     private enum Field { case email, password }
-    private let accent = Color(red: 0.35, green: 0.95, blue: 0.75)
+    // Même couleur que le thème de départ du jeu.
+    private let accent = RushTheme.mint.color
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0.025, green: 0.04, blue: 0.09), .black],
-                           startPoint: .topLeading, endPoint: .bottomTrailing).ignoresSafeArea()
+            RushBackground()
             ScrollView {
                 VStack(spacing: 22) {
                     VStack(spacing: 3) {
@@ -37,9 +37,9 @@ struct AuthView: View {
                         Text(message)
                             .font(.footnote).foregroundStyle(.red)
                             .multilineTextAlignment(.center)
-                            .accessibilityLabel("Erreur : \(message)")
+                            .accessibilityIdentifier("authError")
                     }
-                    Text("Le portefeuille et les couleurs restent fictifs et enregistrés sur cet appareil.")
+                    Text("Ta progression (record, solde fictif, couleurs) est enregistrée dans ton compte.")
                         .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }
                 .padding(24)
@@ -61,12 +61,14 @@ struct AuthView: View {
                 .focused($focusedField, equals: .email)
                 .submitLabel(.next)
                 .onSubmit { focusedField = .password }
+                .accessibilityIdentifier("email")
                 .padding(14).background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
             SecureField("Mot de passe (6 caractères minimum)", text: $password)
                 .textContentType(.password)
                 .focused($focusedField, equals: .password)
                 .submitLabel(.go)
                 .onSubmit { signIn() }
+                .accessibilityIdentifier("password")
                 .padding(14).background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
             Button(action: signIn) {
                 Text("Se connecter").font(.headline)
@@ -74,6 +76,7 @@ struct AuthView: View {
                     .foregroundStyle(.black).background(accent, in: RoundedRectangle(cornerRadius: 14))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("signIn")
             Button {
                 focusedField = nil
                 Task { await auth.createAccount(email: email, password: password) }
@@ -84,6 +87,7 @@ struct AuthView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(accent, lineWidth: 1.5))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("createAccount")
         }
     }
 
