@@ -1,5 +1,6 @@
 // Projet de cours — Théo BOREL et Lana SCHMITT.
 // Ces tests utilisent des centimes fictifs et ne réalisent aucun paiement.
+// Chaque test prépare un portefeuille, réalise une action (gain, achat, défi) puis vérifie le solde.
 import XCTest
 #if canImport(RushCore)
 @testable import RushCore

@@ -2,9 +2,11 @@
 // Économie fictive : les montants sont des centimes entiers, jamais des euros réels.
 import Foundation
 
+/// Couleurs de la boutique. rawValue sert à la sauvegarde et aux identifiants des tests d'interface.
 public enum RushTheme: String, CaseIterable, Codable {
     case mint, violet, gold, ice
 
+    /// Nom affiché dans la boutique.
     public var name: String {
         switch self {
         case .mint: return "Menthe"
@@ -14,6 +16,7 @@ public enum RushTheme: String, CaseIterable, Codable {
         }
     }
 
+    /// Prix en centimes fictifs (200 = 2,00 €).
     public var price: Int {
         switch self {
         case .mint: return 0
@@ -24,10 +27,12 @@ public enum RushTheme: String, CaseIterable, Codable {
     }
 }
 
+/// Ce qui s'est passé quand le joueur touche une couleur dans la boutique.
 public enum PurchaseResult: Equatable {
     case purchased, selected, insufficientFunds
 }
 
+/// Défis permanents : ils avancent sur plusieurs parties et rapportent un bonus une seule fois.
 public enum RushChallenge: String, CaseIterable, Codable {
     case fivePerfects, twentyFloors, firstFever
 
@@ -39,6 +44,7 @@ public enum RushChallenge: String, CaseIterable, Codable {
         }
     }
 
+    /// Valeur à atteindre pour réussir le défi.
     public var goal: Int {
         switch self {
         case .fivePerfects: return 5
@@ -47,6 +53,7 @@ public enum RushChallenge: String, CaseIterable, Codable {
         }
     }
 
+    /// Bonus en centimes fictifs versé à la réussite.
     public var reward: Int {
         switch self {
         case .fivePerfects: return 100
@@ -56,6 +63,8 @@ public enum RushChallenge: String, CaseIterable, Codable {
     }
 }
 
+/// Portefeuille fictif du joueur : solde, compteurs des défis et couleurs possédées.
+/// Codable permet de l'enregistrer d'un bloc (UserDefaults et Firestore).
 public struct RewardsProgress: Codable, Equatable {
     public private(set) var balance = 0
     public private(set) var totalFloors = 0
@@ -73,6 +82,7 @@ public struct RewardsProgress: Codable, Equatable {
         return "\(cents / 100),\(remainder) €"
     }
 
+    /// Avancement d'un défi, plafonné à son objectif pour l'affichage de la barre.
     public func progress(for challenge: RushChallenge) -> Int {
         switch challenge {
         case .fivePerfects: return min(totalPerfects, challenge.goal)
@@ -110,6 +120,8 @@ public struct RewardsProgress: Codable, Equatable {
         return earned
     }
 
+    /// Équipe une couleur déjà possédée, ou l'achète si le solde suffit.
+    /// Un achat refusé ne change rien : ni débit, ni couleur.
     public mutating func buyOrSelect(_ theme: RushTheme) -> PurchaseResult {
         if ownedThemes.contains(theme) {
             selectedTheme = theme

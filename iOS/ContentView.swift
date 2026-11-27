@@ -2,6 +2,7 @@
 // Vue racine : l'écran de connexion tant que personne n'est connecté, puis le jeu.
 import SwiftUI
 
+/// Vue racine de l'app iPhone : choisit l'écran à afficher selon la connexion.
 struct ContentView: View {
     // Créé une seule fois et conservé pendant toute la vie de l'app.
     @StateObject private var auth = AuthManager()

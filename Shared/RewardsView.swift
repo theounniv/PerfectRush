@@ -14,6 +14,7 @@ extension RushTheme {
     }
 }
 
+/// Écran Défis & couleurs, commun à l'iPhone et à la Watch : solde, boutique et défis.
 struct RewardsView: View {
     // @ObservedObject lit le modèle existant : on ne crée pas un deuxième portefeuille.
     @ObservedObject var model: GameModel
@@ -50,6 +51,8 @@ struct RewardsView: View {
         }
     }
 
+    /// Une ligne de la boutique : équipée, possédée (à choisir) ou verrouillée avec son prix.
+    /// Le bouton est désactivé quand le solde ne suffit pas.
     private func themeButton(_ theme: RushTheme) -> some View {
         let owned = model.rewards.ownedThemes.contains(theme)
         let selected = model.rewards.selectedTheme == theme
@@ -83,6 +86,7 @@ struct RewardsView: View {
         .accessibilityIdentifier("theme-" + theme.rawValue)
     }
 
+    /// Carte d'un défi : barre d'avancement, puis « Bonus reçu » une fois réussi.
     private func challengeCard(_ challenge: RushChallenge) -> some View {
         let progress = model.rewards.progress(for: challenge)
         let completed = model.rewards.completedChallenges.contains(challenge)

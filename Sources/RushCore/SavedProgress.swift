@@ -2,6 +2,7 @@
 // Progression d'un compte : ce qui est sauvegardé sur l'appareil et dans le cloud.
 import Foundation
 
+/// Tout ce qui appartient à un compte : record et portefeuille, avec la date de modification.
 public struct SavedProgress: Codable, Equatable {
     public var best: Int
     public var rewards: RewardsProgress

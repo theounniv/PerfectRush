@@ -10,14 +10,17 @@ struct RushEntry: TimelineEntry {
 
 // Le fournisseur donne les données à afficher dans la galerie et sur l'accueil.
 struct RushProvider: TimelineProvider {
+    /// Aperçu affiché pendant le chargement du widget.
     func placeholder(in context: Context) -> RushEntry {
         return RushEntry(date: Date())
     }
 
+    /// Aperçu affiché dans la galerie quand on choisit un widget.
     func getSnapshot(in context: Context, completion: @escaping (RushEntry) -> Void) {
         completion(RushEntry(date: Date()))
     }
 
+    /// Contenu réel : une seule entrée, jamais rafraîchie, car le widget est un simple raccourci.
     func getTimeline(in context: Context, completion: @escaping (Timeline<RushEntry>) -> Void) {
         let entry = RushEntry(date: Date())
         // Pas de données en direct : aucun rafraîchissement périodique nécessaire.
@@ -25,6 +28,7 @@ struct RushProvider: TimelineProvider {
     }
 }
 
+/// Dessin du widget : un rond pour les complications, sinon titre et bouton Jouer.
 struct RushWidgetView: View {
     @Environment(\.widgetFamily) private var family
 

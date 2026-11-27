@@ -4,6 +4,8 @@ import SwiftUI
 import AuthenticationServices
 import GoogleSignInSwift
 
+/// Écran affiché tant que personne n'est connecté.
+/// Les boutons appellent AuthManager ; l'écran se contente d'afficher son état.
 struct AuthView: View {
     // L'état de connexion vient du gestionnaire partagé.
     @ObservedObject var auth: AuthManager
@@ -51,6 +53,7 @@ struct AuthView: View {
         .disabled(auth.isLoading || !auth.isConfigured)
     }
 
+    /// Champs email et mot de passe, puis les boutons Se connecter et Créer un compte.
     private var emailForm: some View {
         VStack(spacing: 12) {
             TextField("Email", text: $email)
@@ -91,6 +94,7 @@ struct AuthView: View {
         }
     }
 
+    /// Ligne « ou » entre la connexion par email et les fournisseurs.
     private var separator: some View {
         HStack {
             Rectangle().fill(.white.opacity(0.15)).frame(height: 1)
@@ -99,6 +103,7 @@ struct AuthView: View {
         }
     }
 
+    /// Boutons officiels Google et Apple, imposés par leurs règles d'apparence.
     private var providerButtons: some View {
         VStack(spacing: 12) {
             GoogleSignInButton(scheme: .dark, style: .wide) {
@@ -116,6 +121,7 @@ struct AuthView: View {
         }
     }
 
+    /// Ferme le clavier puis lance la connexion par email.
     private func signIn() {
         focusedField = nil
         Task { await auth.signIn(email: email, password: password) }

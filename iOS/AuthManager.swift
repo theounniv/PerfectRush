@@ -8,6 +8,8 @@ import FirebaseCore
 import FirebaseAuth
 import GoogleSignIn
 
+/// Gestionnaire unique de la connexion : email, Google, Apple et déconnexion.
+/// Les vues lisent user, isAuthenticated et errorMessage sans connaître Firebase.
 @MainActor
 final class AuthManager: ObservableObject {
     // L'utilisateur Firebase connecté (ou nil).
@@ -45,11 +47,13 @@ final class AuthManager: ObservableObject {
 
     // MARK: Email et mot de passe
 
+    /// Connexion à un compte existant, après vérification des champs.
     func signIn(email: String, password: String) async {
         guard let cleanEmail = checkFields(email: email, password: password) else { return }
         await perform { _ = try await Auth.auth().signIn(withEmail: cleanEmail, password: password) }
     }
 
+    /// Création d'un compte : Firebase connecte aussitôt le nouveau joueur.
     func createAccount(email: String, password: String) async {
         guard let cleanEmail = checkFields(email: email, password: password) else { return }
         await perform { _ = try await Auth.auth().createUser(withEmail: cleanEmail, password: password) }
@@ -57,6 +61,7 @@ final class AuthManager: ObservableObject {
 
     // MARK: Google
 
+    /// Ouvre le choix du compte Google puis connecte ce compte à Firebase.
     func signInWithGoogle() async {
         // Le CLIENT_ID vient de GoogleService-Info.plist, téléchargé après l'activation de Google.
         guard let clientID = FirebaseApp.app()?.options.clientID else {
@@ -88,6 +93,7 @@ final class AuthManager: ObservableObject {
         request.nonce = AuthRules.sha256(nonce)
     }
 
+    /// Reçoit la réponse d'Apple et la transmet à Firebase avec le nonce brut.
     func completeApple(_ result: Result<ASAuthorization, Error>) async {
         switch result {
         case .failure(let error):
@@ -109,6 +115,7 @@ final class AuthManager: ObservableObject {
 
     // MARK: Déconnexion
 
+    /// Déconnecte Firebase et Google ; ContentView revient alors à l'écran de connexion.
     func signOut() {
         guard isConfigured else { return }
         do {
@@ -122,12 +129,14 @@ final class AuthManager: ObservableObject {
 
     // MARK: Outils internes
 
+    /// Met à jour l'état publié quand le compte change.
     private func apply(_ user: User?) {
         self.user = user
         isAuthenticated = user != nil
         if user != nil { errorMessage = nil }
     }
 
+    /// Renvoie l'email nettoyé, ou nil après avoir affiché le problème trouvé.
     private func checkFields(email: String, password: String) -> String? {
         if let problem = AuthRules.validate(email: email, password: password) {
             errorMessage = problem
@@ -149,6 +158,7 @@ final class AuthManager: ObservableObject {
         isLoading = false
     }
 
+    /// Transforme une erreur en message lisible pour le joueur.
     private func report(_ error: Error) {
         // Fermer la fenêtre Google ou Apple n'est pas une erreur à afficher.
         if let googleError = error as? GIDSignInError, googleError.code == .canceled { return }

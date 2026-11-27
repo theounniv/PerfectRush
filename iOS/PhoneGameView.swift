@@ -3,6 +3,8 @@
 import SwiftUI
 import Combine
 
+/// Écran de jeu iPhone, de haut en bas : titre, portefeuille, record et bouclier, score,
+/// tour décorative, piste, bouton principal, vibrations et compte connecté.
 struct PhoneGameView: View {
     // Compte connecté, fourni par ContentView.
     @ObservedObject var auth: AuthManager
@@ -151,6 +153,7 @@ struct PhoneGameView: View {
         .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16))
     }
 
+    /// Titre du jeu et bouton Pause, visible seulement pendant une partie.
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {

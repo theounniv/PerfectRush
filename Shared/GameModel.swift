@@ -9,7 +9,9 @@ import UIKit
 import WatchKit
 #endif
 
-// Les changements de l'interface sont réalisés sur l'acteur principal.
+/// Relie le moteur à l'écran : temps réel, messages, gains, sauvegarde et vibrations.
+/// Partagé par l'iPhone (une progression par compte) et la Watch (sans compte).
+/// @MainActor : les changements de l'interface sont réalisés sur l'acteur principal.
 @MainActor
 final class GameModel: ObservableObject {
     // @Published prévient SwiftUI lorsqu'une valeur affichée change.
@@ -94,6 +96,7 @@ final class GameModel: ObservableObject {
         onProgressSaved?(savedProgress)
     }
 
+    /// Lance une nouvelle partie et remet à zéro les gains de la partie précédente.
     func start() {
         engine.start()
         message = "Vise le centre"
@@ -118,6 +121,8 @@ final class GameModel: ObservableObject {
         lastFrame = now
     }
 
+    /// Toucher du joueur : applique les règles, crédite les gains, sauvegarde
+    /// et prévient le compte seulement si la progression a changé.
     func tap() {
         let result = engine.tap()
         if result == .ignored {
@@ -141,6 +146,7 @@ final class GameModel: ObservableObject {
         playHaptic(for: result)
     }
 
+    /// Texte affiché au-dessus de la piste après un toucher.
     private func updateMessage(for result: HitResult) {
         switch result {
         case .perfect:
@@ -177,6 +183,7 @@ final class GameModel: ObservableObject {
         }
     }
 
+    /// Achète ou équipe une couleur. Un achat refusé n'est ni sauvegardé ni envoyé au compte.
     func buyTheme(_ theme: RushTheme) {
         let result = rewards.buyOrSelect(theme)
         switch result {
@@ -215,11 +222,13 @@ final class GameModel: ObservableObject {
         #endif
     }
 
+    /// Met la partie en pause (bouton, boutique ou passage en arrière-plan).
     func pause() {
         engine.pause()
         lastFrame = nil
     }
 
+    /// Reprend la partie là où le curseur s'était arrêté.
     func resume() {
         engine.resume()
         // Oublier l'ancienne image évite un saut du curseur après la pause.

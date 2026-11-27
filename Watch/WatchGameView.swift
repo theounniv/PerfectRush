@@ -3,6 +3,8 @@
 import SwiftUI
 import Combine
 
+/// Écran de jeu Apple Watch, de haut en bas : score et record, bouclier et multiplicateur,
+/// piste, message, bouton principal, portefeuille, puis aide et vibrations hors partie.
 struct WatchGameView: View {
     // SwiftUI conserve ce modèle pendant la vie de cet écran.
     @StateObject private var model = GameModel()
@@ -72,6 +74,7 @@ struct WatchGameView: View {
         case .gameOver: return "Rejouer"
         }
     }
+    /// Bouton principal dont l'action dépend de l'état : jouer, toucher, reprendre ou rejouer.
     private var action: some View {
         Button(label) {
             switch model.engine.phase {

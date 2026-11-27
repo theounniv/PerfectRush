@@ -3,6 +3,7 @@
 import Foundation
 import CryptoKit
 
+/// Règles de connexion indépendantes de Firebase, pour pouvoir les tester sans réseau.
 public enum AuthRules {
     // Firebase refuse les mots de passe de moins de 6 caractères.
     public static let minimumPasswordLength = 6

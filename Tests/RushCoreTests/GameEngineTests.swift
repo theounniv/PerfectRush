@@ -1,5 +1,7 @@
 // Projet de cours — Théo BOREL et Lana SCHMITT.
 // Tests du moteur : préparer une partie, agir, vérifier le résultat.
+// Chaque test vérifie une seule règle ; son nom dit ce qui est attendu.
+// Le temps est avancé à la main (advance(by:)) : les tests ne dépendent pas de l’horloge.
 import XCTest
 #if canImport(RushCore)
 @testable import RushCore

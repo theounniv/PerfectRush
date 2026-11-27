@@ -4,6 +4,8 @@ import Foundation
 import Combine
 import FirebaseFirestore
 
+/// Synchronise la progression du compte avec Firestore (document players/{uid}).
+/// Le modèle ne connaît pas Firestore : il prévient seulement quand sa progression change.
 @MainActor
 final class ProgressSync: ObservableObject {
     // Petit texte affiché sous le compte pour savoir où en est la sauvegarde.
@@ -35,6 +37,7 @@ final class ProgressSync: ObservableObject {
         await download()
     }
 
+    /// Lit la copie du cloud, la compare à celle de l'iPhone et garde la bonne version.
     private func download() async {
         guard let document, let model, !isDownloading else { return }
         isDownloading = true
@@ -81,6 +84,7 @@ final class ProgressSync: ObservableObject {
         if let model { upload(model.savedProgress) }
     }
 
+    /// Écrit la progression dans Firestore et met à jour la ligne d'état.
     private func upload(_ progress: SavedProgress) {
         guard let document else { return }
         status = "Sauvegarde…"

@@ -2,6 +2,8 @@
 // Dessine la piste, la zone cible et le curseur blanc.
 import SwiftUI
 
+/// Piste de précision : fond, zone cible, centre (Perfect) et curseur blanc.
+/// compact réduit la hauteur pour l'Apple Watch.
 struct RushTrack: View {
     let engine: GameEngine
     var compact = false

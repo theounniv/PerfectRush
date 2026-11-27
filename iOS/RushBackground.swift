@@ -2,6 +2,7 @@
 // Fond commun aux écrans iPhone : connexion et jeu.
 import SwiftUI
 
+/// Dégradé sombre placé derrière l'écran de connexion et l'écran de jeu.
 struct RushBackground: View {
     var body: some View {
         LinearGradient(colors: [Color(red: 0.025, green: 0.04, blue: 0.09), .black],

@@ -19,6 +19,8 @@ public enum HitResult: Equatable {
     case gameOver
 }
 
+/// Moteur du jeu : position du curseur, cible, score, bouclier et Fever.
+/// C'est une struct sans interface : les tests peuvent la piloter seconde par seconde.
 public struct GameEngine {
     // L'écran peut lire ces valeurs ; seul le moteur peut les modifier.
     public private(set) var phase: GamePhase = .ready
@@ -77,12 +79,14 @@ public struct GameEngine {
         phase = .playing
     }
 
+    /// Fige la partie. Sans effet si aucune partie n'est en cours.
     public mutating func pause() {
         if phase == .playing {
             phase = .paused
         }
     }
 
+    /// Reprend une partie en pause, sans changer la position du curseur.
     public mutating func resume() {
         if phase == .paused {
             phase = .playing
@@ -100,6 +104,10 @@ public struct GameEngine {
         feverRemaining = max(0, feverRemaining - delta)
     }
 
+    /// Valide la position du curseur et applique les règles :
+    /// dans la cible → points et nouvel étage ; au centre → Perfect et combo ;
+    /// hors cible → le bouclier se brise, puis la partie se termine à la deuxième erreur.
+    /// - Returns: le résultat du toucher, utilisé pour le message, les gains et la vibration.
     public mutating func tap() -> HitResult {
         // On ignore les appuis hors partie et les doubles appuis trop rapides.
         if phase != .playing || elapsed - lastTap < 0.12 {
